@@ -31,7 +31,7 @@ uv run homedocs-agent
 | Variable | Default |
 | --- | --- |
 | `MCP_URL` | `http://127.0.0.1:8000/mcp` |
-| `BEDROCK_MODEL_ID` | `us.anthropic.claude-haiku-4-5-20251001-v1:0` |
+| `BEDROCK_MODEL_ID` | `global.anthropic.claude-haiku-4-5-20251001-v1:0` |
 | `AWS_REGION` | `us-east-1` |
 | `POLLY_VOICE` | `Joanna` (neural) |
 | `AGENT_HOST` / `AGENT_PORT` | `127.0.0.1` / `8001` |
