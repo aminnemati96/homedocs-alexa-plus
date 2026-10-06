@@ -1,8 +1,8 @@
-"""Document store for household paperwork.
+"""Household documents, their key dates, and the search interface.
 
-This first version loads documents from a JSON file and ranks them with simple
-keyword overlap. The next step replaces `search` with vector search
-(Bedrock embeddings + Qdrant) without changing the tool signatures in server.py.
+`DocumentStore` holds the documents and answers date questions. Search is
+pluggable: `KeywordSearcher` works offline (tests, quick checks) and
+`homedocs_mcp.vector_search.VectorSearcher` uses Bedrock embeddings + Qdrant.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ import json
 import re
 from datetime import date, timedelta
 from pathlib import Path
+from typing import Protocol
 
 from pydantic import BaseModel
 
@@ -51,8 +52,13 @@ class UpcomingDate(BaseModel):
     days_away: int
 
 
-def _tokens(text: str) -> set[str]:
-    return {t for t in _WORD.findall(text.lower()) if t not in _STOPWORDS}
+class Searcher(Protocol):
+    def search(self, query: str, top_k: int) -> list[SearchHit]: ...
+
+
+def load_documents(path: Path) -> list[Document]:
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    return [Document.model_validate(item) for item in raw]
 
 
 class DocumentStore:
@@ -61,34 +67,13 @@ class DocumentStore:
 
     @classmethod
     def from_json(cls, path: Path) -> "DocumentStore":
-        raw = json.loads(path.read_text(encoding="utf-8"))
-        return cls([Document.model_validate(item) for item in raw])
+        return cls(load_documents(path))
 
     def list_all(self) -> list[Document]:
         return list(self._docs.values())
 
     def get(self, document_id: str) -> Document | None:
         return self._docs.get(document_id)
-
-    def search(self, query: str, top_k: int = 3) -> list[SearchHit]:
-        query_tokens = _tokens(query)
-        if not query_tokens:
-            return []
-        hits = []
-        for doc in self._docs.values():
-            doc_tokens = _tokens(f"{doc.title} {doc.category} {doc.text}")
-            overlap = len(query_tokens & doc_tokens)
-            if overlap:
-                hits.append(
-                    SearchHit(
-                        document_id=doc.id,
-                        title=doc.title,
-                        score=overlap / len(query_tokens),
-                        passage=doc.text,
-                    )
-                )
-        hits.sort(key=lambda h: h.score, reverse=True)
-        return hits[:top_k]
 
     def upcoming(self, days_ahead: int, today: date | None = None) -> list[UpcomingDate]:
         today = today or date.today()
@@ -107,3 +92,34 @@ class DocumentStore:
         ]
         result.sort(key=lambda u: u.date)
         return result
+
+
+def _tokens(text: str) -> set[str]:
+    return {t for t in _WORD.findall(text.lower()) if t not in _STOPWORDS}
+
+
+class KeywordSearcher:
+    """Ranks whole documents by word overlap with the query. No network needed."""
+
+    def __init__(self, documents: list[Document]):
+        self._docs = documents
+
+    def search(self, query: str, top_k: int = 3) -> list[SearchHit]:
+        query_tokens = _tokens(query)
+        if not query_tokens:
+            return []
+        hits = []
+        for doc in self._docs:
+            doc_tokens = _tokens(f"{doc.title} {doc.category} {doc.text}")
+            overlap = len(query_tokens & doc_tokens)
+            if overlap:
+                hits.append(
+                    SearchHit(
+                        document_id=doc.id,
+                        title=doc.title,
+                        score=overlap / len(query_tokens),
+                        passage=doc.text,
+                    )
+                )
+        hits.sort(key=lambda h: h.score, reverse=True)
+        return hits[:top_k]

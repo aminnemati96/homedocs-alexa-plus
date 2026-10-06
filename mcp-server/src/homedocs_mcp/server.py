@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-import os
-from pathlib import Path
-
 from mcp.server.fastmcp import FastMCP
 
+from homedocs_mcp import config
 from homedocs_mcp.store import Document, DocumentStore, SearchHit, UpcomingDate
 
-DEFAULT_DATA = Path(__file__).resolve().parents[2] / "data" / "sample_documents.json"
-
-store = DocumentStore.from_json(Path(os.environ.get("HOMEDOCS_DATA", DEFAULT_DATA)))
+store = DocumentStore.from_json(config.DATA_PATH)
+searcher = config.make_searcher()
 
 mcp = FastMCP(
     "homedocs",
@@ -20,8 +17,8 @@ mcp = FastMCP(
         "warranties, insurance and ID documents. Always say which document an "
         "answer came from. Keep spoken answers to one or two sentences."
     ),
-    host=os.environ.get("HOMEDOCS_HOST", "127.0.0.1"),
-    port=int(os.environ.get("HOMEDOCS_PORT", "8000")),
+    host=config.HOST,
+    port=config.PORT,
     stateless_http=True,
 )
 
@@ -32,7 +29,7 @@ def search_documents(query: str, top_k: int = 3) -> list[SearchHit]:
 
     Use for any question about what a bill, lease, warranty or policy says.
     """
-    return store.search(query, top_k=max(1, min(top_k, 10)))
+    return searcher.search(query, top_k=max(1, min(top_k, 10)))
 
 
 @mcp.tool(title="Upcoming dates")
