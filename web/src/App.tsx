@@ -13,7 +13,7 @@ import {
   type Notification,
   type Turn,
 } from "./api";
-import { describeNotifications, isNotificationQuestion } from "./notifications";
+import { describeNotifications } from "./notifications";
 import { listenOnce, speechSupported } from "./speech";
 import { SpeechQueue } from "./speechQueue";
 import Ring, { type RingState } from "./Ring";
@@ -109,10 +109,6 @@ export default function App() {
     const text = question.trim();
     if (!text) {
       setRing("idle");
-      return;
-    }
-    if (isNotificationQuestion(text) && lastCheck.current) {
-      await readNotifications(text);
       return;
     }
     const history = turns;
@@ -284,7 +280,15 @@ export default function App() {
 
         {turns.length === 0 && (
           <div className="suggestions">
-            {(notify ? ["What are my notifications?", ...SUGGESTIONS] : SUGGESTIONS).map((s) => (
+            {/* The notifications chip is a button press, so it plays the summary
+                prepared after the startup check. Anything typed or spoken goes to
+                the model, which understands any wording and has the conversation. */}
+            {notify && lastCheck.current && (
+              <button type="button" className="chip-notify" disabled={busy} onClick={() => void readNotifications("What are my notifications?")}>
+                What are my notifications?
+              </button>
+            )}
+            {SUGGESTIONS.map((s) => (
               <button key={s} type="button" disabled={busy} onClick={() => void ask(s)}>
                 {s}
               </button>

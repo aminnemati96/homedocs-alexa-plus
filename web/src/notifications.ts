@@ -1,16 +1,5 @@
 import type { Notification } from "./api";
 
-/**
- * The plain "read my notifications" command, answered from the startup check.
- * Only whole commands match ("What are my notifications?", "Read my
- * notifications", "Notifications"); follow-ups such as "anything else?" or
- * "any other notifications?" go to the model, which has the conversation.
- */
-export function isNotificationQuestion(text: string): boolean {
-  const cleaned = text.trim().toLowerCase().replace(/[?.!]+$/, "");
-  return /^(?:alexa,?\s*)?(?:(?:what are|what're|read|play|check|tell me)\s+)?(?:me\s+)?(?:my\s+)?notifications$/.test(cleaned);
-}
-
 function ordinal(day: number): string {
   if (day % 100 >= 11 && day % 100 <= 13) return `${day}th`;
   return `${day}${["th", "st", "nd", "rd"][day % 10] ?? "th"}`;

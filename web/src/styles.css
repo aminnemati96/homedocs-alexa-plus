@@ -433,3 +433,9 @@ details summary {
   box-shadow: 0 0 18px rgba(25, 195, 255, 0.3);
   animation: spin 1.8s linear infinite;
 }
+
+/* The notifications chip matches the yellow ring */
+.suggestions button.chip-notify {
+  border-color: #ffc21a;
+  color: #ffd862;
+}
