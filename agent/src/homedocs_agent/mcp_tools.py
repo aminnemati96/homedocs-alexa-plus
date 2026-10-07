@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
+import httpx
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 from mcp.types import CallToolResult, TextContent, Tool
@@ -43,8 +44,12 @@ class McpToolbox:
 
 
 @asynccontextmanager
-async def open_toolbox(url: str) -> AsyncIterator[McpToolbox]:
-    async with streamable_http_client(url) as (read, write, _):
+async def open_toolbox(url: str, headers: dict[str, str] | None = None) -> AsyncIterator[McpToolbox]:
+    # Timeouts match the SDK defaults: 30 s to connect/send, 5 min for streamed reads.
+    http = httpx.AsyncClient(headers=headers, timeout=httpx.Timeout(30, read=300))
+    # terminate_on_close=False: don't send a DELETE when done. AgentCore answers it
+    # with 404, and we want to keep reusing the same warm session anyway.
+    async with http, streamable_http_client(url, http_client=http, terminate_on_close=False) as (read, write, _):
         async with ClientSession(read, write) as session:
             await session.initialize()
             listed = await session.list_tools()

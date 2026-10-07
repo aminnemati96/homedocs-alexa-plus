@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { addDocument, chat, getNotifications, speak, type Notification, type Turn } from "./api";
+import {
+  addDocument,
+  chat,
+  getNotifications,
+  PasscodeRequired,
+  setPasscode,
+  speak,
+  type Notification,
+  type Turn,
+} from "./api";
 import { listenOnce, speechSupported } from "./speech";
 import Ring, { type RingState } from "./Ring";
 import ToolPanel, { type ToolRun } from "./ToolPanel";
@@ -21,6 +30,8 @@ export default function App() {
   const [voiceOn, setVoiceOn] = useState(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notificationsHeard, setNotificationsHeard] = useState(false);
+  const [needPasscode, setNeedPasscode] = useState(false);
+  const [passcodeInput, setPasscodeInput] = useState("");
   const stopListening = useRef<(() => void) | null>(null);
 
   const busy = ring !== "idle";
@@ -35,8 +46,9 @@ export default function App() {
       if (showInPanel) {
         setTools([{ id: "notifications", name: tool.name, input: tool.input, output: tool.output, isError: false, ms: tool.ms }]);
       }
-    } catch {
+    } catch (e) {
       // Notifications are a nice-to-have; the page works without them.
+      if (e instanceof PasscodeRequired) setNeedPasscode(true);
     }
   }
 
@@ -88,7 +100,8 @@ export default function App() {
         await speak(answer);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      if (e instanceof PasscodeRequired) setNeedPasscode(true);
+      else setError(e instanceof Error ? e.message : String(e));
     } finally {
       setRing("idle");
       // The answer may have saved a new document with new dates.
@@ -109,7 +122,8 @@ export default function App() {
     try {
       await ask(await result);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      if (e instanceof PasscodeRequired) setNeedPasscode(true);
+      else setError(e instanceof Error ? e.message : String(e));
       setRing("idle");
     } finally {
       stopListening.current = null;
@@ -141,12 +155,20 @@ export default function App() {
       }
     } catch (e) {
       setTools([]);
-      setError(e instanceof Error ? e.message : String(e));
+      if (e instanceof PasscodeRequired) setNeedPasscode(true);
+      else setError(e instanceof Error ? e.message : String(e));
     } finally {
       setRing("idle");
       setNotificationsHeard(false);
       void refreshNotifications(false);
     }
+  }
+
+  function onPasscode(event: FormEvent) {
+    event.preventDefault();
+    setPasscode(passcodeInput.trim());
+    setNeedPasscode(false);
+    void refreshNotifications(true);
   }
 
   function onSubmit(event: FormEvent) {
@@ -229,6 +251,25 @@ export default function App() {
       </main>
 
       <ToolPanel runs={tools} thinking={ring === "thinking"} />
+
+      {needPasscode && (
+        <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="passcode-title">
+          <form className="passcode" onSubmit={onPasscode}>
+            <h2 id="passcode-title">Demo passcode</h2>
+            <p>This demo uses paid AWS services, so it needs the passcode from the project page.</p>
+            <input
+              type="password"
+              value={passcodeInput}
+              onChange={(e) => setPasscodeInput(e.target.value)}
+              aria-label="Passcode"
+              autoFocus
+            />
+            <button type="submit" disabled={!passcodeInput.trim()}>
+              Continue
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

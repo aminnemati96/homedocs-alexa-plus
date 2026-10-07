@@ -8,22 +8,38 @@ POST /api/documents  multipart file (PDF or image) -> extracted and saved docume
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
 import time
 from collections.abc import AsyncIterator
 from datetime import date
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, UploadFile
-from fastapi.responses import Response, StreamingResponse
+from fastapi import FastAPI, HTTPException, Request, UploadFile
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 
 from homedocs_agent import aws, config
 from homedocs_agent.agent import run_turn
 from homedocs_agent.extract import UnsupportedFile, extract
-from homedocs_agent.mcp_tools import open_toolbox
+from homedocs_agent.connection import open_mcp
 
 app = FastAPI(title="homedocs agent")
+
+
+@app.middleware("http")
+async def guard(request: Request, call_next):
+    """Public-deployment checks; both are skipped when their setting is empty."""
+    if request.url.path != "/api/health":
+        if config.ORIGIN_SECRET and not hmac.compare_digest(
+            request.headers.get("x-origin-verify", ""), config.ORIGIN_SECRET
+        ):
+            return JSONResponse({"detail": "Forbidden"}, status_code=403)
+        if config.DEMO_PASSCODE and not hmac.compare_digest(
+            request.headers.get("x-demo-passcode", ""), config.DEMO_PASSCODE
+        ):
+            return JSONResponse({"detail": "Passcode required"}, status_code=401)
+    return await call_next(request)
 
 
 class Turn(BaseModel):
@@ -46,9 +62,9 @@ def _sse(event: dict) -> str:
 
 async def _chat_events(request: ChatRequest) -> AsyncIterator[str]:
     try:
-        async with open_toolbox(config.MCP_URL) as toolbox:
+        async with open_mcp() as toolbox:
             async for event in run_turn(
-                aws.bedrock.converse,
+                aws.bedrock().converse,
                 config.MODEL_ID,
                 toolbox,
                 [t.model_dump() for t in request.history],
@@ -101,11 +117,11 @@ async def add_document(file: UploadFile) -> dict:
     content_type = file.content_type or ""
     try:
         started = time.perf_counter()
-        fields = await asyncio.to_thread(extract, aws.bedrock.converse, config.MODEL_ID, content_type, data)
+        fields = await asyncio.to_thread(extract, aws.bedrock().converse, config.MODEL_ID, content_type, data)
         extract_ms = round((time.perf_counter() - started) * 1000)
 
         started = time.perf_counter()
-        async with open_toolbox(config.MCP_URL) as toolbox:
+        async with open_mcp() as toolbox:
             saved, is_error = await toolbox.call("save_document", fields)
         save_ms = round((time.perf_counter() - started) * 1000)
     except UnsupportedFile as e:
@@ -137,7 +153,7 @@ async def notifications() -> dict:
     """
     started = time.perf_counter()
     try:
-        async with open_toolbox(config.MCP_URL) as toolbox:
+        async with open_mcp() as toolbox:
             result, is_error = await toolbox.call("list_upcoming_dates", {"days_ahead": NOTIFY_DAYS})
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(_root_cause(e))) from e

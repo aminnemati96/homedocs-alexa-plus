@@ -326,6 +326,7 @@ source = { editable = "." }
 dependencies = [
     { name = "boto3", extra = ["crt"] },
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "mcp" },
     { name = "python-multipart" },
     { name = "uvicorn", extra = ["standard"] },
@@ -340,6 +341,7 @@ dev = [
 requires-dist = [
     { name = "boto3", extras = ["crt"], specifier = ">=1.43" },
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "httpx", specifier = ">=0.27" },
     { name = "mcp", specifier = ">=1.30,<2" },
     { name = "python-multipart", specifier = ">=0.0.9" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },

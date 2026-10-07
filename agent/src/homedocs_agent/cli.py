@@ -11,12 +11,12 @@ from botocore.exceptions import BotoCoreError, ClientError
 
 from homedocs_agent import aws, config
 from homedocs_agent.agent import run_turn
-from homedocs_agent.mcp_tools import open_toolbox
+from homedocs_agent.connection import open_mcp
 
 
 async def ask(question: str) -> None:
-    async with open_toolbox(config.MCP_URL) as toolbox:
-        async for event in run_turn(aws.bedrock.converse, config.MODEL_ID, toolbox, [], question):
+    async with open_mcp() as toolbox:
+        async for event in run_turn(aws.bedrock().converse, config.MODEL_ID, toolbox, [], question):
             if event["type"] == "tool_call":
                 print(f"-> {event['name']}({json.dumps(event['input'])})")
             elif event["type"] == "tool_result":

@@ -2,6 +2,44 @@
 
 export type Turn = { role: "user" | "assistant"; text: string };
 
+// The deployed site asks for a demo passcode; it is kept in this browser only.
+const PASSCODE_KEY = "homedocs-passcode";
+
+export class PasscodeRequired extends Error {
+  constructor() {
+    super("Passcode required");
+  }
+}
+
+let sessionPasscode = "";
+
+export function setPasscode(passcode: string): void {
+  try {
+    localStorage.setItem(PASSCODE_KEY, passcode);
+  } catch {
+    // Storage can be blocked (private mode); the passcode then lasts for this page only.
+  }
+  sessionPasscode = passcode;
+}
+
+function getPasscode(): string {
+  try {
+    return localStorage.getItem(PASSCODE_KEY) ?? sessionPasscode;
+  } catch {
+    return sessionPasscode;
+  }
+}
+
+/** fetch() plus the passcode header; throws PasscodeRequired on 401. */
+async function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers);
+  const passcode = getPasscode();
+  if (passcode) headers.set("X-Demo-Passcode", passcode);
+  const response = await fetch(url, { ...init, headers });
+  if (response.status === 401) throw new PasscodeRequired();
+  return response;
+}
+
 export type AgentEvent =
   | { type: "tool_call"; id: string; name: string; input: Record<string, unknown> }
   | {
@@ -21,7 +59,7 @@ export async function chat(
   history: Turn[],
   onEvent: (event: AgentEvent) => void,
 ): Promise<void> {
-  const response = await fetch("/api/chat", {
+  const response = await apiFetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text, history }),
@@ -52,7 +90,7 @@ export async function chat(
 
 /** Fetch Polly audio for a reply and play it. Resolves when playback ends. */
 export async function speak(text: string): Promise<void> {
-  const response = await fetch("/api/speak", {
+  const response = await apiFetch("/api/speak", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text }),
@@ -77,7 +115,7 @@ export type UploadStep = { name: string; input: Record<string, unknown>; output:
 export async function addDocument(file: File): Promise<{ steps: UploadStep[]; message: string }> {
   const form = new FormData();
   form.append("file", file);
-  const response = await fetch("/api/documents", { method: "POST", body: form });
+  const response = await apiFetch("/api/documents", { method: "POST", body: form });
   const body = await response.json();
   if (!response.ok) throw new Error(body.detail ?? `Upload failed with ${response.status}`);
   return body;
@@ -87,7 +125,7 @@ export type Notification = { document_id: string; title: string; label: string; 
 
 /** Upcoming dates for the notification ring, plus the MCP call that produced them. */
 export async function getNotifications(): Promise<{ items: Notification[]; tool: UploadStep }> {
-  const response = await fetch("/api/notifications");
+  const response = await apiFetch("/api/notifications");
   const body = await response.json();
   if (!response.ok) throw new Error(body.detail ?? `Notifications failed with ${response.status}`);
   return body;
