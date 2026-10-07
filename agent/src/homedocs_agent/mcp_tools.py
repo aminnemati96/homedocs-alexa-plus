@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -16,6 +17,8 @@ from pydantic import AnyUrl
 
 # Tools the model never sees; only the agent calls them (e.g. the nightly reset).
 ADMIN_PREFIX = "admin_"
+
+log = logging.getLogger("homedocs")
 
 # The server's Agent Skill (agentskills.io format), loaded as the model's instructions.
 SKILL_URI = "skill://homedocs-paperwork/SKILL.md"
@@ -94,6 +97,6 @@ async def open_toolbox(url: str, headers: dict[str, str] | None = None) -> Async
             try:
                 result = await session.read_resource(AnyUrl(SKILL_URI))
                 toolbox.skill = skill_body("".join(getattr(c, "text", "") for c in result.contents))
-            except Exception:  # an older server without the skill still works
-                pass
+            except Exception as e:  # an older server without the skill still works
+                log.warning("Could not load the Agent Skill %s: %s", SKILL_URI, e)
             yield toolbox

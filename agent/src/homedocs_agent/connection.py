@@ -8,6 +8,7 @@ new one (and paying a cold start) every time.
 
 from __future__ import annotations
 
+import os
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -36,8 +37,10 @@ _tokens = (
     else None
 )
 
-# AgentCore session ids must be at least 33 characters; a UUID string is 36.
-_SESSION_ID = str(uuid.uuid4())
+# AgentCore session ids must be at least 33 characters. One session per Lambda
+# container; a new MCP server deploy changes MCP_RUNTIME_VERSION, which replaces
+# the containers and so the session (see infra/agent.tf).
+_SESSION_ID = f"homedocs-v{os.environ.get('MCP_RUNTIME_VERSION', '0')}-{uuid.uuid4().hex}"
 
 
 @asynccontextmanager

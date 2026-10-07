@@ -126,6 +126,10 @@ resource "aws_lambda_function" "agent" {
       COGNITO_CLIENT_SECRET_ARN = aws_secretsmanager_secret.cognito_client_secret.arn
       DEMO_PASSCODE             = var.demo_passcode
       ORIGIN_SECRET             = random_password.origin_secret.result
+      # Changes on every MCP server deploy, which restarts the Lambda and so starts
+      # a fresh AgentCore session. Without it, the kept-warm session would keep
+      # talking to the previous server version for up to 8 hours.
+      MCP_RUNTIME_VERSION = aws_bedrockagentcore_agent_runtime.mcp.agent_runtime_version
     }
   }
 
