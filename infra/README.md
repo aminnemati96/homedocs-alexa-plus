@@ -7,7 +7,7 @@
 | `mcp_runtime.tf` | ECR repository, IAM role, and the MCP server on Bedrock AgentCore Runtime |
 | `agent.tf` | ECR repository, IAM role, Secrets Manager secret, Lambda function and streaming function URL |
 | `web.tf` | Private S3 bucket and CloudFront distribution (`/` to S3, `/api/*` to Lambda) |
-| `warmup.tf` | EventBridge schedule that keeps the Lambda and AgentCore session warm (`keep_warm`) |
+| `warmup.tf` | EventBridge schedules: keep the Lambda and AgentCore session warm (`keep_warm`), and reset the demo documents nightly (`nightly_reset`) |
 | `alerts.tf` | Email alerts: monthly budget, agent failures, Lambda errors, throttles, traffic spikes |
 | `resource_group.tf` | A resource group listing everything tagged `Project=homedocs` |
 

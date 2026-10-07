@@ -16,13 +16,15 @@ from homedocs_agent.connection import open_mcp
 
 async def ask(question: str) -> None:
     async with open_mcp() as toolbox:
-        async for event in run_turn(aws.bedrock().converse, config.MODEL_ID, toolbox, [], question):
+        async for event in run_turn(aws.bedrock().converse_stream, config.MODEL_ID, toolbox, [], question):
             if event["type"] == "tool_call":
                 print(f"-> {event['name']}({json.dumps(event['input'])})")
             elif event["type"] == "tool_result":
-                print(f"<- {event['name']} in {event['ms']} ms")
+                print(f"<- {event['name']} in {event['ms']} ms\n")
+            elif event["type"] == "answer_delta":
+                print(event["text"], end="", flush=True)  # the answer appears as it's written
             else:
-                print(f"\n{event['text']}")
+                print()
 
 
 def main() -> int:

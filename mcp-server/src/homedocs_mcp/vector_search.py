@@ -54,8 +54,7 @@ class VectorSearcher:
                 ),
             )
 
-    def index(self, doc: Document) -> int:
-        """Replace all passages of one document. Returns the passage count."""
+    def delete(self, doc: Document) -> None:
         self._qdrant.delete(
             collection_name=self._collection,
             points_selector=models.FilterSelector(
@@ -68,6 +67,10 @@ class VectorSearcher:
                 )
             ),
         )
+
+    def index(self, doc: Document) -> int:
+        """Replace all passages of one document. Returns the passage count."""
+        self.delete(doc)
         points = [
             models.PointStruct(
                 id=str(uuid.uuid5(_ID_NAMESPACE, f"{doc.id}:{i}")),

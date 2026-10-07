@@ -95,3 +95,19 @@ def test_s3vectors_index_is_idempotent_and_search_reports_similarity():
     hit = searcher.search("when is the hydro bill due", top_k=1)[0]
     assert hit.document_id == DOC.id
     assert hit.score == pytest.approx(0.75)
+
+
+def test_delete_removes_document_and_its_passages():
+    dynamo = FakeDynamo()
+    dynamo.delete_item = lambda TableName, Key, ReturnValues: {"Attributes": dynamo.items.pop(Key["id"]["S"])}
+    store = DynamoDocumentStore(dynamo, "table")
+    store.add(DOC)
+    assert store.delete(DOC.id) == DOC
+    assert store.list_all() == []
+
+    client = FakeS3Vectors()
+    client.delete_vectors = lambda vectorBucketName, indexName, keys: [client.vectors.pop(k) for k in keys]
+    searcher = S3VectorsSearcher(client, FakeEmbedder(), "bucket", "passages")
+    searcher.index(DOC)
+    searcher.delete(DOC)
+    assert client.vectors == {}

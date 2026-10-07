@@ -78,13 +78,13 @@ data "aws_iam_policy_document" "mcp_permissions" {
   }
   statement {
     sid       = "Documents"
-    actions   = ["dynamodb:Scan", "dynamodb:GetItem", "dynamodb:PutItem"]
+    actions   = ["dynamodb:Scan", "dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:DeleteItem"]
     resources = [aws_dynamodb_table.documents.arn]
   }
   statement {
     sid = "Vectors"
     # GetVectors is required for queries that return metadata.
-    actions   = ["s3vectors:PutVectors", "s3vectors:QueryVectors", "s3vectors:GetVectors"]
+    actions   = ["s3vectors:PutVectors", "s3vectors:QueryVectors", "s3vectors:GetVectors", "s3vectors:DeleteVectors"]
     resources = [aws_s3vectors_index.passages.index_arn]
   }
   statement {
@@ -121,6 +121,7 @@ resource "aws_bedrockagentcore_agent_runtime" "mcp" {
     HOMEDOCS_TABLE         = aws_dynamodb_table.documents.name
     HOMEDOCS_VECTOR_BUCKET = aws_s3vectors_vector_bucket.passages.vector_bucket_name
     HOMEDOCS_VECTOR_INDEX  = aws_s3vectors_index.passages.index_name
+    HOMEDOCS_ADMIN_TOOLS   = "true" # nightly reset (see warmup.tf); hidden from the model
   }
 
   # Only callers holding a Cognito token from our app client get in.

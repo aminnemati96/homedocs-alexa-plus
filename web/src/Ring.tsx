@@ -4,11 +4,12 @@ const LABELS: Record<RingState, string> = {
   idle: "Start listening",
   listening: "Stop listening",
   thinking: "Thinking",
-  speaking: "Speaking",
+  speaking: "Stop speaking",
 };
 
 /**
- * The light ring, styled after an Echo device. Clicking it toggles the mic.
+ * The light ring, styled after an Echo device. Clicking it toggles the mic,
+ * or interrupts the reply while it is speaking.
  * `notify` glows yellow while idle, the way an Echo shows a pending notification.
  */
 export default function Ring({
@@ -27,7 +28,7 @@ export default function Ring({
       type="button"
       className={`ring ring-${state}${checking ? " ring-checking" : notify ? " ring-notify" : ""}`}
       onClick={onClick}
-      disabled={!onClick || state === "thinking" || state === "speaking"}
+      disabled={!onClick || state === "thinking"}
       aria-label={notify ? `${LABELS[state]} (you have notifications)` : LABELS[state]}
     >
       <span className="ring-glow" />

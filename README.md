@@ -1,5 +1,7 @@
 # HomeDocs for Alexa+
 
+[![CI](https://github.com/aminnemati96/homedocs-alexa-plus/actions/workflows/ci.yml/badge.svg)](https://github.com/aminnemati96/homedocs-alexa-plus/actions/workflows/ci.yml)
+
 Ask Alexa about your own household paperwork. "When does my car insurance renew?",
 "Is my laptop still under warranty?", "Can I have a cat in my apartment?" HomeDocs
 answers in a sentence or two, says which document the answer came from, and lights
@@ -15,9 +17,12 @@ simulates an Alexa+ device** for the demo.
   bills, leases, warranties, insurance policies and ID documents.
 - **Reads new documents for you.** Upload a PDF or a phone photo; Bedrock pulls out
   the title, provider, key dates and a summary, and it is searchable right away.
-- **Remembers things you say.** "Remember that my car registration renews May 3rd."
+- **Remembers things you say, and forgets on request.** "Remember that my car
+  registration renews May 3rd." "Forget my old lease."
 - **Tells you what is coming up.** On start it checks the next 14 days and shows a
   yellow notification ring, like an Echo. "What are my notifications?" reads them out.
+- **Feels like a voice assistant.** Answers stream in and are spoken sentence by
+  sentence while Claude is still writing; tap the ring to interrupt.
 - **Shows its work.** A side panel lists every MCP tool call live, with inputs,
   timing and results.
 
@@ -67,7 +72,10 @@ streams every step back to the page. The final answer is spoken with Polly.
 | `list_documents` | Every stored document with its key dates |
 | `get_document` | Full text of one document |
 | `save_document` | Store a new document or spoken note and index it |
+| `delete_document` | Remove a document and its passages |
 
+Every tool carries MCP tool annotations (read-only, or adds or removes data), and
+`list_upcoming_dates` takes the user's local date, since the servers run on UTC.
 The server works with any MCP client. The demo also shows it in MCP Inspector.
 
 ## AWS services and why
@@ -85,7 +93,7 @@ The server works with any MCP client. The demo also shows it in MCP Inspector.
 | Amazon CloudFront + S3 | Serves the web app and routes `/api/*` to Lambda on one URL |
 | AWS Secrets Manager | Holds the Cognito client secret for the Lambda |
 | Amazon ECR | Container images for the MCP server and the agent |
-| Amazon EventBridge Scheduler | Pings the agent every 5 minutes so the Lambda and AgentCore session stay warm |
+| Amazon EventBridge Scheduler | Keeps the Lambda and AgentCore session warm (every 5 minutes) and resets the public demo's documents nightly |
 | Amazon CloudWatch, SNS, AWS Budgets | Email alerts for failed requests, Lambda errors, throttles, traffic spikes and cost |
 | AWS Resource Groups | One view of everything tagged `Project=homedocs` |
 
@@ -95,7 +103,8 @@ is a few dollars a month.
 **Security choices:** the MCP server only accepts Cognito tokens from the agent's app
 client; IAM roles are scoped to the one table, vector index and models they use; the
 Lambda rejects requests that do not come through CloudFront; the public site needs a
-demo passcode because every question costs Bedrock usage.
+demo passcode because every question costs Bedrock usage; the demo's documents reset
+to the samples every night, so one visitor's uploads never stay for the next.
 
 ## Repository layout
 

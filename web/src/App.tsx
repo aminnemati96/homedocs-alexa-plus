@@ -8,12 +8,14 @@ import {
   playAudio,
   setPasscode,
   speak,
+  stopAudio,
   synthesize,
   type Notification,
   type Turn,
 } from "./api";
 import { describeNotifications, isNotificationQuestion } from "./notifications";
 import { listenOnce, speechSupported } from "./speech";
+import { SpeechQueue } from "./speechQueue";
 import Ring, { type RingState } from "./Ring";
 import ToolPanel, { type ToolRun } from "./ToolPanel";
 
@@ -44,6 +46,7 @@ export default function App() {
   // "what are my notifications?" is answered instantly without a new lookup.
   const lastCheck = useRef<ToolRun | null>(null);
   const briefing = useRef<{ text: string; audio: Promise<Blob> | null } | null>(null);
+  const activeQueue = useRef<SpeechQueue | null>(null);
 
   const busy = ring !== "idle";
   const notify = !busy && !notificationsHeard && notifications.length > 0;
@@ -120,10 +123,22 @@ export default function App() {
     setHeard("");
     setRing("thinking");
 
-    let answer = "";
+    // Speak sentence by sentence as the answer streams in.
+    const queue = voiceOn ? new SpeechQueue(() => setRing("speaking")) : null;
+    activeQueue.current = queue;
+    let streamed = false;
     try {
       await chat(text, history, (event) => {
         switch (event.type) {
+          case "answer_delta":
+            queue?.push(event.text);
+            if (!streamed) {
+              streamed = true;
+              setTurns((all) => [...all, { role: "assistant", text: event.text }]);
+            } else {
+              setTurns((all) => [...all.slice(0, -1), { role: "assistant", text: all[all.length - 1].text + event.text }]);
+            }
+            break;
           case "tool_call":
             setTools((runs) => [...runs, { id: event.id, name: event.name, input: event.input }]);
             break;
@@ -137,24 +152,23 @@ export default function App() {
             );
             break;
           case "answer":
-            answer = event.text;
-            setTurns((all) => [...all, { role: "assistant", text: event.text }]);
+            if (!streamed) queue?.push(event.text);
+            setTurns((all) => [...(streamed ? all.slice(0, -1) : all), { role: "assistant", text: event.text }]);
+            streamed = true;
             break;
           case "error":
             setError(event.message);
             break;
         }
       });
-      if (answer && voiceOn) {
-        setRing("speaking");
-        await speak(answer);
-      }
+      await queue?.finish();
     } catch (e) {
       if (e instanceof PasscodeRequired) setNeedPasscode(true);
       else setError(e instanceof Error ? e.message : String(e));
     } finally {
+      activeQueue.current = null;
       setRing("idle");
-      // The answer may have saved a new document with new dates.
+      // The answer may have saved or deleted a document, changing the dates.
       void refreshNotifications(false);
     }
   }
@@ -162,6 +176,12 @@ export default function App() {
   async function onMic() {
     if (ring === "listening") {
       stopListening.current?.();
+      return;
+    }
+    if (ring === "speaking") {
+      // Tap to interrupt, like Alexa.
+      activeQueue.current?.stop();
+      stopAudio();
       return;
     }
     if (busy) return;
@@ -242,7 +262,7 @@ export default function App() {
         <p className="status" aria-live="polite">
           {ring === "listening" && (heard || "Listening...")}
           {ring === "thinking" && "Checking your documents..."}
-          {ring === "speaking" && "Speaking"}
+          {ring === "speaking" && "Speaking. Tap the ring to stop."}
           {ring === "idle" && checking && "Checking for updates..."}
           {ring === "idle" &&
             !checking &&

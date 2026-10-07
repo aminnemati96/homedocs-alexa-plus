@@ -23,6 +23,8 @@ DOCUMENTS_TABLE = os.environ.get("HOMEDOCS_TABLE", "homedocs-documents")
 VECTOR_BUCKET = os.environ.get("HOMEDOCS_VECTOR_BUCKET", "")
 VECTOR_INDEX = os.environ.get("HOMEDOCS_VECTOR_INDEX", "passages")
 AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
+# "true" registers admin_reset_demo (used by the nightly reset on the public demo).
+ADMIN_TOOLS = os.environ.get("HOMEDOCS_ADMIN_TOOLS", "").lower() == "true"
 HOST = os.environ.get("HOMEDOCS_HOST", "127.0.0.1")
 PORT = int(os.environ.get("HOMEDOCS_PORT", "8000"))
 

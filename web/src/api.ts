@@ -49,7 +49,15 @@ async function apiFetch(url: string, init: RequestInit = {}): Promise<Response> 
   return response;
 }
 
+/** The browser's local date (YYYY-MM-DD); the servers run on UTC. */
+export function localToday(): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
 export type AgentEvent =
+  | { type: "answer_delta"; text: string }
   | { type: "tool_call"; id: string; name: string; input: Record<string, unknown> }
   | {
       type: "tool_result";
@@ -71,7 +79,7 @@ export async function chat(
   const response = await apiFetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, history }),
+    body: JSON.stringify({ text, history, today: localToday() }),
   });
   if (!response.ok || !response.body) {
     throw new Error(`Agent returned ${response.status}`);
@@ -113,18 +121,30 @@ export async function speak(text: string): Promise<void> {
   await playAudio(await synthesize(text));
 }
 
-/** Play audio that was already fetched. Resolves when playback ends. */
+let current: { audio: HTMLAudioElement; finish: () => void } | null = null;
+
+/** Play audio that was already fetched. Resolves when playback ends or is stopped. */
 export async function playAudio(blob: Blob): Promise<void> {
   const url = URL.createObjectURL(blob);
   try {
     const audio = new Audio(url);
     await new Promise<void>((resolve, reject) => {
+      current = { audio, finish: resolve };
       audio.onended = () => resolve();
       audio.onerror = () => reject(new Error("Audio playback failed"));
       audio.play().catch(reject);
     });
   } finally {
+    current = null;
     URL.revokeObjectURL(url);
+  }
+}
+
+/** Stop whatever is playing (tap the ring to interrupt, like Alexa). */
+export function stopAudio(): void {
+  if (current) {
+    current.audio.pause();
+    current.finish();
   }
 }
 
@@ -134,6 +154,7 @@ export type UploadStep = { name: string; input: Record<string, unknown>; output:
 export async function addDocument(file: File): Promise<{ steps: UploadStep[]; message: string }> {
   const form = new FormData();
   form.append("file", file);
+  form.append("today", localToday());
   const response = await apiFetch("/api/documents", { method: "POST", body: form });
   const body = await response.json();
   if (!response.ok) throw new Error(body.detail ?? `Upload failed with ${response.status}`);
@@ -144,7 +165,7 @@ export type Notification = { document_id: string; title: string; label: string; 
 
 /** Upcoming dates for the notification ring, plus the MCP call that produced them. */
 export async function getNotifications(): Promise<{ items: Notification[]; tool: UploadStep }> {
-  const response = await apiFetch("/api/notifications");
+  const response = await apiFetch(`/api/notifications?today=${localToday()}`);
   const body = await response.json();
   if (!response.ok) throw new Error(body.detail ?? `Notifications failed with ${response.status}`);
   return body;

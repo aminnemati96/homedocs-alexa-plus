@@ -51,6 +51,13 @@ class DynamoDocumentStore:
             Item={"id": {"S": doc.id}, "body": {"S": doc.model_dump_json()}},
         )
 
+    def delete(self, document_id: str) -> Document | None:
+        response = self._client.delete_item(
+            TableName=self._table, Key={"id": {"S": document_id}}, ReturnValues="ALL_OLD"
+        )
+        old = response.get("Attributes")
+        return Document.model_validate_json(old["body"]["S"]) if old else None
+
     def upcoming(self, days_ahead: int, today: date | None = None) -> list[UpcomingDate]:
         return upcoming_dates(self.list_all(), days_ahead, today)
 
@@ -81,6 +88,12 @@ class S3VectorsSearcher:
         if vectors:
             self._client.put_vectors(vectorBucketName=self._bucket, indexName=self._index, vectors=vectors)
         return len(vectors)
+
+    def delete(self, doc: Document) -> None:
+        # Keys are "<id>#<n>", one per passage, so the text tells us which exist.
+        keys = [f"{doc.id}#{i}" for i in range(len(split_passages(doc.text)))]
+        if keys:
+            self._client.delete_vectors(vectorBucketName=self._bucket, indexName=self._index, keys=keys)
 
     def search(self, query: str, top_k: int = 3) -> list[SearchHit]:
         response = self._client.query_vectors(

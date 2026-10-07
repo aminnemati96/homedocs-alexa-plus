@@ -61,3 +61,21 @@ def test_new_document_id_is_a_unique_slug():
     first = new_document_id("Home Insurance (2026)!")
     assert first.startswith("home-insurance-2026-")
     assert first != new_document_id("Home Insurance (2026)!")
+
+
+def test_delete_and_restore(tmp_path):
+    user_file = tmp_path / "user_documents.json"
+    store = DocumentStore.from_json(DATA, user_file)
+    note = Document(id="note-1", title="Note", category="other", provider="", key_dates=[], text="Hi.")
+    store.add(note)
+    assert store.delete("note-1") == note
+    assert store.get("note-1") is None
+    assert DocumentStore.from_json(DATA, user_file).get("note-1") is None
+    assert store.delete("missing") is None
+
+
+def test_upcoming_uses_the_given_local_date():
+    store = DocumentStore.from_json(DATA)
+    # Oct 15 is "today" for the user, even if the server's UTC date is already Oct 16.
+    upcoming = store.upcoming(days_ahead=1, today=date(2026, 10, 15))
+    assert [(u.document_id, u.days_away) for u in upcoming] == [("internet-bill-sep-2026", 0)]

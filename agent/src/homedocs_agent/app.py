@@ -16,7 +16,7 @@ from collections.abc import AsyncIterator
 from datetime import date
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request, UploadFile
+from fastapi import FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -63,6 +63,17 @@ class Turn(BaseModel):
 class ChatRequest(BaseModel):
     text: str = Field(min_length=1, max_length=1000)
     history: list[Turn] = Field(default_factory=list, max_length=20)
+    # The browser's local date. Servers run on UTC, which is already tomorrow
+    # for North American users in the evening.
+    today: date | None = None
+
+
+def _local_today(today: date | None) -> date:
+    """The user's date if the browser sent a plausible one, else the server's."""
+    server = date.today()
+    if today is not None and abs((today - server).days) <= 1:
+        return today
+    return server
 
 
 class SpeakRequest(BaseModel):
@@ -77,11 +88,12 @@ async def _chat_events(request: ChatRequest) -> AsyncIterator[str]:
     try:
         async with open_mcp() as toolbox:
             async for event in run_turn(
-                aws.bedrock().converse,
+                aws.bedrock().converse_stream,
                 config.MODEL_ID,
                 toolbox,
                 [t.model_dump() for t in request.history],
                 request.text,
+                today=_local_today(request.today),
             ):
                 yield _sse(event)
     except Exception as e:  # surface failures in the UI instead of a dropped stream
@@ -113,11 +125,11 @@ async def speak(request: SpeakRequest) -> Response:
     return Response(content=audio, media_type="audio/mpeg")
 
 
-def _confirmation(doc: dict) -> str:
+def _confirmation(doc: dict, today: date) -> str:
     """What the assistant says after saving, e.g. "Got it, I saved your lease..."."""
     message = f"Got it, I saved your {doc['title']}."
     upcoming = sorted(
-        (d for d in doc.get("key_dates", []) if date.fromisoformat(d["date"]) >= date.today()),
+        (d for d in doc.get("key_dates", []) if date.fromisoformat(d["date"]) >= today),
         key=lambda d: d["date"],
     )
     if upcoming:
@@ -128,16 +140,19 @@ def _confirmation(doc: dict) -> str:
 
 
 @app.post("/api/documents")
-async def add_document(file: UploadFile) -> dict:
+async def add_document(file: UploadFile, today: date | None = Form(None)) -> dict:
     """Extract a document's fields with Bedrock, then save it through the MCP server.
 
     Returns both steps so the UI can show them in the tool panel.
     """
+    local_today = _local_today(today)
     data = await file.read()
     content_type = file.content_type or ""
     try:
         started = time.perf_counter()
-        fields = await asyncio.to_thread(extract, aws.bedrock().converse, config.MODEL_ID, content_type, data)
+        fields = await asyncio.to_thread(
+            extract, aws.bedrock().converse, config.MODEL_ID, content_type, data, local_today
+        )
         extract_ms = round((time.perf_counter() - started) * 1000)
 
         started = time.perf_counter()
@@ -157,7 +172,7 @@ async def add_document(file: UploadFile) -> dict:
              "output": fields, "ms": extract_ms},
             {"name": "save_document", "input": {"title": fields["title"]}, "output": saved, "ms": save_ms},
         ],
-        "message": _confirmation(saved),
+        "message": _confirmation(saved, local_today),
     }
 
 
@@ -165,7 +180,7 @@ NOTIFY_DAYS = 14
 
 
 @app.get("/api/notifications")
-async def notifications() -> dict:
+async def notifications(today: date | None = None) -> dict:
     """Dates due in the next two weeks, straight from the MCP server.
 
     The web page lights the ring yellow when this is not empty, like an Echo
@@ -174,7 +189,10 @@ async def notifications() -> dict:
     started = time.perf_counter()
     try:
         async with open_mcp() as toolbox:
-            result, is_error = await toolbox.call("list_upcoming_dates", {"days_ahead": NOTIFY_DAYS})
+            result, is_error = await toolbox.call(
+                "list_upcoming_dates",
+                {"days_ahead": NOTIFY_DAYS, "today": _local_today(today).isoformat()},
+            )
     except Exception as e:
         raise HTTPException(status_code=502, detail=_failure("notifications", e)) from e
     if is_error:
@@ -191,24 +209,37 @@ async def notifications() -> dict:
 
 
 @app.post(WARMUP_PATH)
-async def warmup(request: Request) -> dict:
-    """Keep the Lambda and its AgentCore session warm (EventBridge, every 5 minutes).
+async def scheduled_task(request: Request) -> dict:
+    """Jobs run by EventBridge Scheduler through a direct Lambda invoke.
 
-    Runs the same MCP call as the notification check, so the first visitor's
-    request finds everything already started. The schedule sends the origin
-    secret in its payload; anything else gets a 403.
+    Payload: {"task": "warmup" | "reset", "token": <origin secret>}
+    - warmup (every 5 minutes): the same MCP call as the notification check, so
+      the Lambda and its AgentCore session are already running for visitors.
+    - reset (nightly): put the demo documents back to the samples, so one
+      visitor's uploads don't stay for the next (admin tool, hidden from the model).
     """
     body = await request.json() if await request.body() else {}
-    token = body.get("warmup", "") if isinstance(body, dict) else ""
-    if not config.ORIGIN_SECRET or not hmac.compare_digest(token, config.ORIGIN_SECRET):
+    body = body if isinstance(body, dict) else {}
+    token = body.get("token", "")
+    if not config.ORIGIN_SECRET or not hmac.compare_digest(str(token), config.ORIGIN_SECRET):
         raise HTTPException(status_code=403, detail="Forbidden")
+    task = body.get("task", "warmup")
+    if task not in ("warmup", "reset"):
+        raise HTTPException(status_code=400, detail=f"Unknown task '{task}'")
+
     started = time.perf_counter()
     try:
         async with open_mcp() as toolbox:
-            await toolbox.call("list_upcoming_dates", {"days_ahead": NOTIFY_DAYS})
+            if task == "reset":
+                result, is_error = await toolbox.call("admin_reset_demo", {})
+                if is_error:
+                    raise RuntimeError(result.get("text", "Reset failed"))
+            else:
+                result, _ = await toolbox.call("list_upcoming_dates", {"days_ahead": NOTIFY_DAYS})
     except Exception as e:
-        raise HTTPException(status_code=502, detail=_failure("warmup", e)) from e
-    return {"ok": True, "ms": round((time.perf_counter() - started) * 1000)}
+        raise HTTPException(status_code=502, detail=_failure(task, e)) from e
+    log.info("%s done in %d ms", task, round((time.perf_counter() - started) * 1000))
+    return {"ok": True, "task": task}
 
 
 @app.get("/api/health")

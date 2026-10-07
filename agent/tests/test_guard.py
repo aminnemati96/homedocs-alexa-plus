@@ -33,5 +33,5 @@ def test_wrong_passcode_is_rejected(client):
 
 
 def test_warmup_rejects_calls_without_the_schedule_token(client):
-    assert client.post("/events", json={"warmup": "guess"}).status_code == 403
+    assert client.post("/events", json={"task": "reset", "token": "guess"}).status_code == 403
     assert client.post("/events").status_code == 403

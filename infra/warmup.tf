@@ -1,6 +1,8 @@
-# Keeps the agent Lambda and its AgentCore MCP session warm so the first visitor
-# doesn't wait for two cold starts. Turn off after judging with
-#   terraform apply -var keep_warm=false
+# Scheduled jobs for the public demo, both sent to the agent Lambda's /events:
+# - warmup every 5 minutes keeps the Lambda and its AgentCore MCP session warm,
+#   so the first visitor doesn't wait for two cold starts
+#   (turn off after judging: terraform apply -var keep_warm=false)
+# - reset every night puts the documents back to the samples
 
 variable "keep_warm" {
   description = "Ping the agent every 5 minutes to avoid cold starts."
@@ -53,10 +55,37 @@ resource "aws_scheduler_schedule" "warmup" {
     arn      = aws_lambda_function.agent.arn
     role_arn = aws_iam_role.warmup.arn
     # The Lambda Web Adapter forwards this payload to POST /events.
-    input = jsonencode({ warmup = random_password.origin_secret.result })
+    input = jsonencode({ task = "warmup", token = random_password.origin_secret.result })
 
     retry_policy {
       maximum_retry_attempts = 0
+    }
+  }
+}
+
+variable "nightly_reset" {
+  description = "Reset the demo documents to the samples every night."
+  type        = bool
+  default     = true
+}
+
+resource "aws_scheduler_schedule" "reset" {
+  name                         = "${var.name}-nightly-reset"
+  schedule_expression          = "cron(0 4 * * ? *)" # 4 AM in the time zone below
+  schedule_expression_timezone = "America/Halifax"
+  state                        = var.nightly_reset ? "ENABLED" : "DISABLED"
+
+  flexible_time_window {
+    mode = "OFF"
+  }
+
+  target {
+    arn      = aws_lambda_function.agent.arn
+    role_arn = aws_iam_role.warmup.arn
+    input    = jsonencode({ task = "reset", token = random_password.origin_secret.result })
+
+    retry_policy {
+      maximum_retry_attempts = 2
     }
   }
 }

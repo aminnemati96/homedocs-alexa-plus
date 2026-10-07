@@ -58,6 +58,8 @@ class Searcher(Protocol):
 
     def index(self, doc: Document) -> int: ...
 
+    def delete(self, doc: Document) -> None: ...
+
 
 def load_documents(path: Path) -> list[Document]:
     if not path.exists():
@@ -101,10 +103,28 @@ class DocumentStore:
             raise ValueError(f"A document with id '{doc.id}' already exists")
         self._docs[doc.id] = doc
         self._user_ids.append(doc.id)
-        if self._user_path is not None:
-            user_docs = [self._docs[i].model_dump(mode="json") for i in self._user_ids]
-            self._user_path.parent.mkdir(parents=True, exist_ok=True)
-            self._user_path.write_text(json.dumps(user_docs, indent=2), encoding="utf-8")
+        self._save_user_docs()
+
+    def put(self, doc: Document) -> None:
+        """Insert or replace (used to restore sample documents)."""
+        self._docs[doc.id] = doc
+        if doc.id in self._user_ids:
+            self._save_user_docs()
+
+    def delete(self, document_id: str) -> Document | None:
+        """Remove a document. Deleting a sample only lasts until the next restart."""
+        doc = self._docs.pop(document_id, None)
+        if document_id in self._user_ids:
+            self._user_ids.remove(document_id)
+            self._save_user_docs()
+        return doc
+
+    def _save_user_docs(self) -> None:
+        if self._user_path is None:
+            return
+        user_docs = [self._docs[i].model_dump(mode="json") for i in self._user_ids]
+        self._user_path.parent.mkdir(parents=True, exist_ok=True)
+        self._user_path.write_text(json.dumps(user_docs, indent=2), encoding="utf-8")
 
     def upcoming(self, days_ahead: int, today: date | None = None) -> list[UpcomingDate]:
         return upcoming_dates(self.list_all(), days_ahead, today)
@@ -119,6 +139,10 @@ class Store(Protocol):
     def get(self, document_id: str) -> Document | None: ...
 
     def add(self, doc: Document) -> None: ...
+
+    def put(self, doc: Document) -> None: ...
+
+    def delete(self, document_id: str) -> Document | None: ...
 
     def upcoming(self, days_ahead: int, today: date | None = None) -> list[UpcomingDate]: ...
 
@@ -153,8 +177,12 @@ class KeywordSearcher:
         self._docs = list(documents)
 
     def index(self, doc: Document) -> int:
+        self.delete(doc)
         self._docs.append(doc)
         return 1
+
+    def delete(self, doc: Document) -> None:
+        self._docs = [d for d in self._docs if d.id != doc.id]
 
     def search(self, query: str, top_k: int = 3) -> list[SearchHit]:
         query_tokens = _tokens(query)
