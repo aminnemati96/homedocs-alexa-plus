@@ -8,6 +8,7 @@ dist/
 mcp-server/data/user_documents.json
 .env.*
 !.env.example
+!web/.env.production
 infra/.terraform/
 infra/*.tfstate
 infra/*.tfstate.*

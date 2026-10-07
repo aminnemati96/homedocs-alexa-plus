@@ -3,6 +3,7 @@ import {
   addDocument,
   chat,
   getNotifications,
+  passcodeMissing,
   PasscodeRequired,
   setPasscode,
   speak,
@@ -30,7 +31,7 @@ export default function App() {
   const [voiceOn, setVoiceOn] = useState(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notificationsHeard, setNotificationsHeard] = useState(false);
-  const [needPasscode, setNeedPasscode] = useState(false);
+  const [needPasscode, setNeedPasscode] = useState(passcodeMissing);
   const [passcodeInput, setPasscodeInput] = useState("");
   const stopListening = useRef<(() => void) | null>(null);
 
@@ -53,7 +54,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    void refreshNotifications(true);
+    if (!passcodeMissing()) void refreshNotifications(true);
   }, []);
 
   async function ask(question: string) {

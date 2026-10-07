@@ -22,6 +22,15 @@ export function setPasscode(passcode: string): void {
   sessionPasscode = passcode;
 }
 
+/**
+ * True on the deployed site when no passcode is saved yet, so the prompt can
+ * show right away instead of after the first API call fails (which can take a
+ * few seconds while Lambda starts). Set in web/.env.production.
+ */
+export function passcodeMissing(): boolean {
+  return import.meta.env.VITE_REQUIRE_PASSCODE === "true" && !getPasscode();
+}
+
 function getPasscode(): string {
   try {
     return localStorage.getItem(PASSCODE_KEY) ?? sessionPasscode;
