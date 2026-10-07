@@ -33,6 +33,9 @@ export default function App() {
   const [notificationsHeard, setNotificationsHeard] = useState(false);
   const [needPasscode, setNeedPasscode] = useState(passcodeMissing);
   const [passcodeInput, setPasscodeInput] = useState("");
+  // True until the first notification check finishes: the ring spins slowly in
+  // blue, like an Echo starting up, so the cold-start wait looks deliberate.
+  const [checking, setChecking] = useState(false);
   const stopListening = useRef<(() => void) | null>(null);
 
   const busy = ring !== "idle";
@@ -41,6 +44,7 @@ export default function App() {
   // Like an Echo: check for due dates on start and light the ring yellow if any.
   // The check is a plain MCP tool call, shown in the panel so viewers can see it.
   async function refreshNotifications(showInPanel: boolean) {
+    if (showInPanel) setChecking(true);
     try {
       const { items, tool } = await getNotifications();
       setNotifications(items);
@@ -50,6 +54,8 @@ export default function App() {
     } catch (e) {
       // Notifications are a nice-to-have; the page works without them.
       if (e instanceof PasscodeRequired) setNeedPasscode(true);
+    } finally {
+      if (showInPanel) setChecking(false);
     }
   }
 
@@ -188,13 +194,15 @@ export default function App() {
           <span className="brand-sub">for Alexa+ (simulated)</span>
         </header>
 
-        <Ring state={ring} notify={notify} onClick={speechSupported ? onMic : undefined} />
+        <Ring state={ring} notify={notify} checking={checking} onClick={speechSupported ? onMic : undefined} />
 
         <p className="status" aria-live="polite">
           {ring === "listening" && (heard || "Listening...")}
           {ring === "thinking" && "Checking your documents..."}
           {ring === "speaking" && "Speaking"}
+          {ring === "idle" && checking && "Checking for updates..."}
           {ring === "idle" &&
+            !checking &&
             (notify
               ? `You have ${notifications.length} notification${notifications.length === 1 ? "" : "s"}. Ask "what are my notifications?"`
               : speechSupported

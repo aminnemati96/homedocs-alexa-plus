@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import hmac
 import json
+import logging
 import time
 from collections.abc import AsyncIterator
 from datetime import date
@@ -25,12 +26,24 @@ from homedocs_agent.extract import UnsupportedFile, extract
 from homedocs_agent.connection import open_mcp
 
 app = FastAPI(title="homedocs agent")
+log = logging.getLogger("homedocs")
+
+# Every failed request logs one line starting with this marker; a CloudWatch
+# metric filter counts them and alarms (see infra/alerts.tf).
+FAILURE_MARKER = "HOMEDOCS_FAILURE"
+
+# The Lambda Web Adapter forwards non-HTTP events (our EventBridge schedule) here.
+WARMUP_PATH = "/events"
 
 
 @app.middleware("http")
 async def guard(request: Request, call_next):
-    """Public-deployment checks; both are skipped when their setting is empty."""
-    if request.url.path != "/api/health":
+    """Public-deployment checks; both are skipped when their setting is empty.
+
+    /events is exempt because scheduled warm-ups reach it through a direct Lambda
+    invoke, not CloudFront; it checks its own token instead (see warmup()).
+    """
+    if request.url.path not in ("/api/health", WARMUP_PATH):
         if config.ORIGIN_SECRET and not hmac.compare_digest(
             request.headers.get("x-origin-verify", ""), config.ORIGIN_SECRET
         ):
@@ -72,7 +85,14 @@ async def _chat_events(request: ChatRequest) -> AsyncIterator[str]:
             ):
                 yield _sse(event)
     except Exception as e:  # surface failures in the UI instead of a dropped stream
-        yield _sse({"type": "error", "message": str(_root_cause(e))})
+        yield _sse({"type": "error", "message": _failure("chat", e)})
+
+
+def _failure(where: str, e: BaseException) -> str:
+    """Log a failed request for the CloudWatch alarm; return the message for the user."""
+    message = str(_root_cause(e))
+    log.error("%s %s: %s", FAILURE_MARKER, where, message)
+    return message
 
 
 def _root_cause(e: BaseException) -> BaseException:
@@ -127,7 +147,7 @@ async def add_document(file: UploadFile) -> dict:
     except UnsupportedFile as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=502, detail=str(_root_cause(e))) from e
+        raise HTTPException(status_code=502, detail=_failure("upload", e)) from e
     if is_error:
         raise HTTPException(status_code=502, detail=saved.get("text", "Saving failed"))
 
@@ -156,7 +176,7 @@ async def notifications() -> dict:
         async with open_mcp() as toolbox:
             result, is_error = await toolbox.call("list_upcoming_dates", {"days_ahead": NOTIFY_DAYS})
     except Exception as e:
-        raise HTTPException(status_code=502, detail=str(_root_cause(e))) from e
+        raise HTTPException(status_code=502, detail=_failure("notifications", e)) from e
     if is_error:
         raise HTTPException(status_code=502, detail=result.get("text", "Lookup failed"))
     return {
@@ -170,10 +190,32 @@ async def notifications() -> dict:
     }
 
 
+@app.post(WARMUP_PATH)
+async def warmup(request: Request) -> dict:
+    """Keep the Lambda and its AgentCore session warm (EventBridge, every 5 minutes).
+
+    Runs the same MCP call as the notification check, so the first visitor's
+    request finds everything already started. The schedule sends the origin
+    secret in its payload; anything else gets a 403.
+    """
+    body = await request.json() if await request.body() else {}
+    token = body.get("warmup", "") if isinstance(body, dict) else ""
+    if not config.ORIGIN_SECRET or not hmac.compare_digest(token, config.ORIGIN_SECRET):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    started = time.perf_counter()
+    try:
+        async with open_mcp() as toolbox:
+            await toolbox.call("list_upcoming_dates", {"days_ahead": NOTIFY_DAYS})
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=_failure("warmup", e)) from e
+    return {"ok": True, "ms": round((time.perf_counter() - started) * 1000)}
+
+
 @app.get("/api/health")
 async def health() -> dict:
     return {"ok": True, "model": config.MODEL_ID, "mcp": config.MCP_URL}
 
 
 def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
     uvicorn.run(app, host=config.HOST, port=config.PORT)

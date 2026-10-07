@@ -51,3 +51,7 @@ output "site_url" {
 output "distribution_id" {
   value = aws_cloudfront_distribution.site.id
 }
+
+output "resource_group_url" {
+  value = "https://${var.region}.console.aws.amazon.com/resource-groups/group/${aws_resourcegroups_group.homedocs.name}"
+}

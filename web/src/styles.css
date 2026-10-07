@@ -425,3 +425,11 @@ details summary {
 .passcode button:disabled {
   opacity: 0.5;
 }
+
+/* Starting up: slow blue spin while the first notification check runs */
+.ring-idle.ring-checking .ring-glow {
+  border-color: rgba(25, 195, 255, 0.15);
+  border-top-color: var(--accent);
+  box-shadow: 0 0 18px rgba(25, 195, 255, 0.3);
+  animation: spin 1.8s linear infinite;
+}

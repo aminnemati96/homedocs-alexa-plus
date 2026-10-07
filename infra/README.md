@@ -7,6 +7,9 @@
 | `mcp_runtime.tf` | ECR repository, IAM role, and the MCP server on Bedrock AgentCore Runtime |
 | `agent.tf` | ECR repository, IAM role, Secrets Manager secret, Lambda function and streaming function URL |
 | `web.tf` | Private S3 bucket and CloudFront distribution (`/` to S3, `/api/*` to Lambda) |
+| `warmup.tf` | EventBridge schedule that keeps the Lambda and AgentCore session warm (`keep_warm`) |
+| `alerts.tf` | Email alerts: monthly budget, agent failures, Lambda errors, throttles, traffic spikes |
+| `resource_group.tf` | A resource group listing everything tagged `Project=homedocs` |
 
 Commands below are for PowerShell, which needs quotes around `-chdir=...` and
 `-target=...` options. Run them from this folder.
@@ -17,7 +20,11 @@ Commands below are for PowerShell, which needs quotes around `-chdir=...` and
 
    ```
    demo_passcode = "choose-one"
+   alert_email   = "you@example.com"
    ```
+
+   After the first apply, confirm the subscription email AWS sends, or alarms
+   won't reach you.
 
 2. Create the image repositories, log Docker in to ECR, and push both images
    (AgentCore and the Lambda both run ARM64):

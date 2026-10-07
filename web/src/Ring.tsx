@@ -14,16 +14,18 @@ const LABELS: Record<RingState, string> = {
 export default function Ring({
   state,
   notify = false,
+  checking = false,
   onClick,
 }: {
   state: RingState;
   notify?: boolean;
+  checking?: boolean;
   onClick?: () => void;
 }) {
   return (
     <button
       type="button"
-      className={`ring ring-${state}${notify ? " ring-notify" : ""}`}
+      className={`ring ring-${state}${checking ? " ring-checking" : notify ? " ring-notify" : ""}`}
       onClick={onClick}
       disabled={!onClick || state === "thinking" || state === "speaking"}
       aria-label={notify ? `${LABELS[state]} (you have notifications)` : LABELS[state]}

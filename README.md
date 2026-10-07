@@ -85,6 +85,9 @@ The server works with any MCP client. The demo also shows it in MCP Inspector.
 | Amazon CloudFront + S3 | Serves the web app and routes `/api/*` to Lambda on one URL |
 | AWS Secrets Manager | Holds the Cognito client secret for the Lambda |
 | Amazon ECR | Container images for the MCP server and the agent |
+| Amazon EventBridge Scheduler | Pings the agent every 5 minutes so the Lambda and AgentCore session stay warm |
+| Amazon CloudWatch, SNS, AWS Budgets | Email alerts for failed requests, Lambda errors, throttles, traffic spikes and cost |
+| AWS Resource Groups | One view of everything tagged `Project=homedocs` |
 
 All infrastructure is Terraform in [`infra/`](infra/). Running cost at demo traffic
 is a few dollars a month.
