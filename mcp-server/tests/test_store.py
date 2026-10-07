@@ -48,7 +48,7 @@ def test_added_documents_persist_across_restarts(tmp_path):
         category="vehicle",
         provider="",
         key_dates=[KeyDate(label="Registration renews", date=date(2027, 5, 3))],
-        text="Registration for the Honda Civic renews May 3, 2027.",
+        text="Registration for the Corvane sedan renews May 3, 2027.",
     )
     DocumentStore.from_json(DATA, user_file).add(doc)
 

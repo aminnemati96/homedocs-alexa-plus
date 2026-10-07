@@ -1,13 +1,13 @@
 [
   {
     "id": "auto-insurance-2026",
-    "title": "Car insurance policy (2025 Honda Civic)",
+    "title": "Car insurance policy (2025 Corvane sedan)",
     "category": "insurance",
     "provider": "Maple Shield Insurance",
     "key_dates": [
       {"label": "Policy renewal", "date": "2026-11-14"}
     ],
-    "text": "Policy number MS-448210. Covers the 2025 Honda Civic. Annual premium is $1,860, paid monthly at $155. Deductible is $500 for collision and $300 for comprehensive. Roadside assistance is included. The policy renews on November 14, 2026. To cancel, give 30 days written notice."
+    "text": "Policy number MS-448210. Covers the 2025 Corvane C5 sedan. Annual premium is $1,860, paid monthly at $155. Deductible is $500 for collision and $300 for comprehensive. Roadside assistance is included. The policy renews on November 14, 2026. To cancel, give 30 days written notice."
   },
   {
     "id": "dishwasher-warranty",
@@ -17,7 +17,7 @@
     "key_dates": [
       {"label": "Warranty expires", "date": "2026-10-29"}
     ],
-    "text": "Extended warranty for the Bosch 300 Series dishwasher, serial SHE53C85N. Covers parts and labour for mechanical and electrical failures. Does not cover cosmetic damage or damage from improper installation. Coverage ends October 29, 2026. To make a claim, call 1-800-555-0142 with the serial number and proof of purchase."
+    "text": "Extended warranty for the Kelvra 300 Series dishwasher, serial KD300-58217. Covers parts and labour for mechanical and electrical failures. Does not cover cosmetic damage or damage from improper installation. Coverage ends October 29, 2026. To make a claim, call 1-800-555-0142 with the serial number and proof of purchase."
   },
   {
     "id": "apartment-lease",
