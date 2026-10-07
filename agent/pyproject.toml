@@ -22,6 +22,8 @@ homedocs-ask = "homedocs_agent.cli:main"
 [dependency-groups]
 dev = [
     "pytest>=8",
+    # Starlette's TestClient prefers httpx2 and warns when it falls back to httpx.
+    "httpx2>=2.13",
 ]
 
 [build-system]

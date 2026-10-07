@@ -74,6 +74,15 @@ streams every step back to the page. The final answer is spoken with Polly.
 | `save_document` | Store a new document or spoken note and index it |
 | `delete_document` | Remove a document and its passages |
 
+### Agent Skill
+
+The server ships an [Agent Skill](https://agentskills.io) at
+[`mcp-server/skills/homedocs-paperwork/SKILL.md`](mcp-server/skills/homedocs-paperwork/SKILL.md):
+when to use each tool, how to answer by voice, and when to save or delete. It is also
+served over MCP as the resource `skill://homedocs-paperwork/SKILL.md`, and the agent
+loads it from there as its instructions, so Alexa+, this simulator and any other MCP
+client follow the same guide.
+
 Every tool carries MCP tool annotations (read-only, or adds or removes data), and
 `list_upcoming_dates` takes the user's local date, since the servers run on UTC.
 The server works with any MCP client. The demo also shows it in MCP Inspector.

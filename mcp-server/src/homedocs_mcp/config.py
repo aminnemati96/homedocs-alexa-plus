@@ -11,7 +11,9 @@ from pathlib import Path
 
 from homedocs_mcp.store import DocumentStore, KeywordSearcher, Searcher, Store
 
-_DATA_DIR = Path(__file__).resolve().parents[2] / "data"
+_PROJECT_DIR = Path(__file__).resolve().parents[2]
+_DATA_DIR = _PROJECT_DIR / "data"
+SKILL_PATH = _PROJECT_DIR / "skills" / "homedocs-paperwork" / "SKILL.md"
 
 DATA_PATH = Path(os.environ.get("HOMEDOCS_DATA", _DATA_DIR / "sample_documents.json"))
 USER_DATA_PATH = Path(os.environ.get("HOMEDOCS_USER_DATA", _DATA_DIR / "user_documents.json"))

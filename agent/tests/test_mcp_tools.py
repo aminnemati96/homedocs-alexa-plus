@@ -40,3 +40,11 @@ def test_admin_tools_are_hidden_and_user_date_is_injected():
     # Even if the model passes its own date, the browser's date wins.
     asyncio.run(toolbox.call("list_upcoming_dates", {"days_ahead": 14, "today": "2026-10-16"}))
     assert session.calls == [("list_upcoming_dates", {"days_ahead": 14, "today": "2026-10-15"})]
+
+
+def test_skill_body_drops_the_frontmatter():
+    from homedocs_agent.mcp_tools import skill_body
+
+    markdown = "---\nname: homedocs-paperwork\ndescription: x\n---\n\n# HomeDocs\n\nBe brief."
+    assert skill_body(markdown) == "# HomeDocs\n\nBe brief."
+    assert skill_body("No frontmatter") == "No frontmatter"

@@ -79,3 +79,14 @@ def test_upcoming_uses_the_given_local_date():
     # Oct 15 is "today" for the user, even if the server's UTC date is already Oct 16.
     upcoming = store.upcoming(days_ahead=1, today=date(2026, 10, 15))
     assert [(u.document_id, u.days_away) for u in upcoming] == [("internet-bill-sep-2026", 0)]
+
+
+def test_skill_file_follows_the_agent_skills_format():
+    from homedocs_mcp.config import SKILL_PATH
+
+    text = SKILL_PATH.read_text(encoding="utf-8")
+    frontmatter = text.split("---")[1]
+    assert "name: homedocs-paperwork" in frontmatter
+    assert SKILL_PATH.parent.name == "homedocs-paperwork"  # name must match the folder
+    description = next(line for line in frontmatter.splitlines() if line.startswith("description:"))
+    assert len(description) - len("description: ") <= 1024

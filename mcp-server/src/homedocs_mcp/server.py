@@ -22,6 +22,10 @@ READ_ONLY = ToolAnnotations(readOnlyHint=True, openWorldHint=False)
 ADDS_DATA = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False)
 REMOVES_DATA = ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False)
 
+# The Agent Skill that teaches an agent how to use these tools (agentskills.io
+# format). Served as an MCP resource so any client can load it from the server.
+SKILL_URI = "skill://homedocs-paperwork/SKILL.md"
+
 store = config.make_store()  # local JSON files, or DynamoDB when deployed
 searcher = config.make_searcher(store)
 
@@ -30,12 +34,24 @@ mcp = FastMCP(
     instructions=(
         "Answers questions about the user's household paperwork: bills, leases, "
         "warranties, insurance and ID documents. Always say which document an "
-        "answer came from. Keep spoken answers to one or two sentences."
+        "answer came from. Keep spoken answers to one or two sentences. The full "
+        f"guide for agents is the Agent Skill at {SKILL_URI}."
     ),
     host=config.HOST,
     port=config.PORT,
     stateless_http=True,
 )
+
+
+@mcp.resource(
+    SKILL_URI,
+    name="homedocs-paperwork",
+    title="HomeDocs paperwork skill",
+    description="Agent Skill: how to answer paperwork questions with these tools, by voice.",
+    mime_type="text/markdown",
+)
+def paperwork_skill() -> str:
+    return config.SKILL_PATH.read_text(encoding="utf-8")
 
 
 @mcp.tool(title="Search documents", annotations=READ_ONLY)

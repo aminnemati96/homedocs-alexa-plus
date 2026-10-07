@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -10,10 +11,20 @@ import httpx
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 from mcp.types import CallToolResult, TextContent, Tool
+from pydantic import AnyUrl
 
 
 # Tools the model never sees; only the agent calls them (e.g. the nightly reset).
 ADMIN_PREFIX = "admin_"
+
+# The server's Agent Skill (agentskills.io format), loaded as the model's instructions.
+SKILL_URI = "skill://homedocs-paperwork/SKILL.md"
+
+
+def skill_body(markdown: str) -> str:
+    """SKILL.md without its YAML frontmatter."""
+    match = re.match(r"^---\s*\n.*?\n---\s*\n", markdown, flags=re.DOTALL)
+    return (markdown[match.end():] if match else markdown).strip()
 
 
 def to_converse_tool(tool: Tool, hidden_args: frozenset[str] = frozenset()) -> dict[str, Any]:
@@ -54,6 +65,7 @@ class McpToolbox:
         self._params = {t.name: set(t.inputSchema.get("properties", {})) for t in tools}
         self._tools = [t for t in tools if not t.name.startswith(ADMIN_PREFIX)]
         self.context: dict[str, Any] = {}
+        self.skill = ""  # the server's Agent Skill, if it publishes one
 
     @property
     def converse_tools(self) -> list[dict[str, Any]]:
@@ -78,4 +90,10 @@ async def open_toolbox(url: str, headers: dict[str, str] | None = None) -> Async
         async with ClientSession(read, write) as session:
             await session.initialize()
             listed = await session.list_tools()
-            yield McpToolbox(session, listed.tools)
+            toolbox = McpToolbox(session, listed.tools)
+            try:
+                result = await session.read_resource(AnyUrl(SKILL_URI))
+                toolbox.skill = skill_body("".join(getattr(c, "text", "") for c in result.contents))
+            except Exception:  # an older server without the skill still works
+                pass
+            yield toolbox

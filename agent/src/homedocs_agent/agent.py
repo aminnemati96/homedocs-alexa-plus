@@ -21,29 +21,18 @@ from typing import Any, Protocol
 
 MAX_TOOL_ROUNDS = 5
 
-SYSTEM_PROMPT = """You are a voice assistant like Alexa. You help the user with \
-their household paperwork: bills, leases, warranties, insurance and ID documents.
+SYSTEM_PROMPT = """You are a voice assistant like Alexa, running on the user's device. Today is {today} (the user's local date).
 
-Today is {today} (the user's local date).
+{skill}"""
 
-Rules:
-- Use the tools to look things up. Never guess a date, amount or term.
-- Don't announce that you are looking something up; just answer.
-- Your answer is spoken aloud. Use one or two short sentences, no lists, no markdown.
-- Say which document the answer came from, in plain words ("your lease says...").
-- Say dates naturally ("November 14th") and mention how far away they are when useful.
-- If the documents do not answer the question, say so briefly.
-- "Notifications" means dates due in the next 14 days (list_upcoming_dates with \
-days_ahead 14). If the user asks for anything beyond their notifications, look \
-further ahead (for example 90 days) and mention only what they haven't heard yet.
-- Only call save_document when the user asks you to remember something, and \
-delete_document when they clearly ask you to forget or remove something. Confirm \
-what you saved or removed in one sentence."""
+# Used only if the MCP server doesn't publish its Agent Skill.
+FALLBACK_SKILL = """Help the user with their household paperwork using the tools. Never guess a date, amount or term. Answer in one or two short spoken sentences, say which document the answer came from, and only save or delete documents when the user asks."""
 
 
 class Toolbox(Protocol):
     converse_tools: list[dict[str, Any]]
     context: dict[str, Any]
+    skill: str
 
     async def call(self, name: str, arguments: dict[str, Any]) -> tuple[dict[str, Any], bool]: ...
 
@@ -110,7 +99,10 @@ async def run_turn(
     # Tools that take the user's date get it from us, not from the model.
     toolbox.context["today"] = today.isoformat()
     messages = build_messages(history, user_text)
-    system = [{"text": SYSTEM_PROMPT.format(today=today.strftime("%A, %B %d, %Y"))}]
+    # The instructions come from the MCP server's Agent Skill (SKILL.md), so the
+    # same guide serves this agent, Alexa+ and any other MCP client.
+    skill = getattr(toolbox, "skill", "") or FALLBACK_SKILL
+    system = [{"text": SYSTEM_PROMPT.format(today=today.strftime("%A, %B %d, %Y"), skill=skill)}]
     spoken: list[str] = []
 
     for _ in range(MAX_TOOL_ROUNDS + 1):
