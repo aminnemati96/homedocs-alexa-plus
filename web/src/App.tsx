@@ -5,11 +5,14 @@ import {
   getNotifications,
   passcodeMissing,
   PasscodeRequired,
+  playAudio,
   setPasscode,
   speak,
+  synthesize,
   type Notification,
   type Turn,
 } from "./api";
+import { describeNotifications, isNotificationQuestion } from "./notifications";
 import { listenOnce, speechSupported } from "./speech";
 import Ring, { type RingState } from "./Ring";
 import ToolPanel, { type ToolRun } from "./ToolPanel";
@@ -37,6 +40,10 @@ export default function App() {
   // blue, like an Echo starting up, so the cold-start wait looks deliberate.
   const [checking, setChecking] = useState(false);
   const stopListening = useRef<(() => void) | null>(null);
+  // The last notification check, and its spoken summary fetched in advance, so
+  // "what are my notifications?" is answered instantly without a new lookup.
+  const lastCheck = useRef<ToolRun | null>(null);
+  const briefing = useRef<{ text: string; audio: Promise<Blob> | null } | null>(null);
 
   const busy = ring !== "idle";
   const notify = !busy && !notificationsHeard && notifications.length > 0;
@@ -48,9 +55,15 @@ export default function App() {
     try {
       const { items, tool } = await getNotifications();
       setNotifications(items);
-      if (showInPanel) {
-        setTools([{ id: "notifications", name: tool.name, input: tool.input, output: tool.output, isError: false, ms: tool.ms }]);
+      const run: ToolRun = { id: "notifications", name: tool.name, input: tool.input, output: tool.output, isError: false, ms: tool.ms };
+      lastCheck.current = run;
+      const text = describeNotifications(items);
+      if (briefing.current?.text !== text) {
+        const audio = voiceOn && items.length > 0 ? synthesize(text) : null;
+        audio?.catch(() => {}); // a failed prefetch just means we fetch again on demand
+        briefing.current = { text, audio };
       }
+      if (showInPanel) setTools([run]);
     } catch (e) {
       // Notifications are a nice-to-have; the page works without them.
       if (e instanceof PasscodeRequired) setNeedPasscode(true);
@@ -63,10 +76,40 @@ export default function App() {
     if (!passcodeMissing()) void refreshNotifications(true);
   }, []);
 
+  /** Read notifications from the last check: no model call, no new MCP lookup. */
+  async function readNotifications(question: string) {
+    const summary = briefing.current?.text ?? describeNotifications(notifications);
+    setNotificationsHeard(true);
+    setTurns((all) => [...all, { role: "user", text: question }, { role: "assistant", text: summary }]);
+    if (lastCheck.current) {
+      setTools([{ ...lastCheck.current, input: { ...lastCheck.current.input, from: "startup check" } }]);
+    }
+    setError("");
+    setHeard("");
+    if (!voiceOn) {
+      setRing("idle");
+      return;
+    }
+    setRing("speaking");
+    try {
+      const audio = briefing.current?.text === summary && briefing.current.audio ? briefing.current.audio : synthesize(summary);
+      await playAudio(await audio);
+    } catch (e) {
+      if (e instanceof PasscodeRequired) setNeedPasscode(true);
+      else setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRing("idle");
+    }
+  }
+
   async function ask(question: string) {
     const text = question.trim();
     if (!text) {
       setRing("idle");
+      return;
+    }
+    if (isNotificationQuestion(text) && lastCheck.current) {
+      await readNotifications(text);
       return;
     }
     const history = turns;

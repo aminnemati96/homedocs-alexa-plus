@@ -97,15 +97,25 @@ export async function chat(
   }
 }
 
-/** Fetch Polly audio for a reply and play it. Resolves when playback ends. */
-export async function speak(text: string): Promise<void> {
+/** Fetch Polly audio (MP3) for some text. */
+export async function synthesize(text: string): Promise<Blob> {
   const response = await apiFetch("/api/speak", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text }),
   });
   if (!response.ok) throw new Error(`Speech failed with ${response.status}`);
-  const url = URL.createObjectURL(await response.blob());
+  return response.blob();
+}
+
+/** Fetch Polly audio for a reply and play it. Resolves when playback ends. */
+export async function speak(text: string): Promise<void> {
+  await playAudio(await synthesize(text));
+}
+
+/** Play audio that was already fetched. Resolves when playback ends. */
+export async function playAudio(blob: Blob): Promise<void> {
+  const url = URL.createObjectURL(blob);
   try {
     const audio = new Audio(url);
     await new Promise<void>((resolve, reject) => {
