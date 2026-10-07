@@ -13,7 +13,7 @@ from homedocs_mcp.store import (
     new_document_id,
 )
 
-store = config.make_store()
+store = config.make_store()  # local JSON files, or DynamoDB when deployed
 searcher = config.make_searcher(store)
 
 mcp = FastMCP(

@@ -107,22 +107,39 @@ class DocumentStore:
             self._user_path.write_text(json.dumps(user_docs, indent=2), encoding="utf-8")
 
     def upcoming(self, days_ahead: int, today: date | None = None) -> list[UpcomingDate]:
-        today = today or date.today()
-        horizon = today + timedelta(days=days_ahead)
-        result = [
-            UpcomingDate(
-                document_id=doc.id,
-                title=doc.title,
-                label=kd.label,
-                date=kd.date,
-                days_away=(kd.date - today).days,
-            )
-            for doc in self._docs.values()
-            for kd in doc.key_dates
-            if today <= kd.date <= horizon
-        ]
-        result.sort(key=lambda u: u.date)
-        return result
+        return upcoming_dates(self.list_all(), days_ahead, today)
+
+
+class Store(Protocol):
+    """What the MCP tools need; implemented by DocumentStore (local JSON files)
+    and homedocs_mcp.cloud.DynamoDocumentStore (DynamoDB)."""
+
+    def list_all(self) -> list[Document]: ...
+
+    def get(self, document_id: str) -> Document | None: ...
+
+    def add(self, doc: Document) -> None: ...
+
+    def upcoming(self, days_ahead: int, today: date | None = None) -> list[UpcomingDate]: ...
+
+
+def upcoming_dates(docs: list[Document], days_ahead: int, today: date | None = None) -> list[UpcomingDate]:
+    today = today or date.today()
+    horizon = today + timedelta(days=days_ahead)
+    result = [
+        UpcomingDate(
+            document_id=doc.id,
+            title=doc.title,
+            label=kd.label,
+            date=kd.date,
+            days_away=(kd.date - today).days,
+        )
+        for doc in docs
+        for kd in doc.key_dates
+        if today <= kd.date <= horizon
+    ]
+    result.sort(key=lambda u: u.date)
+    return result
 
 
 def _tokens(text: str) -> set[str]:
