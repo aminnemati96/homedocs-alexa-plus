@@ -105,7 +105,13 @@ async def run_turn(
     system = [{"text": SYSTEM_PROMPT.format(today=today.strftime("%A, %B %d, %Y"), skill=skill)}]
     spoken: list[str] = []
 
-    for _ in range(MAX_TOOL_ROUNDS + 1):
+    for round_number in range(MAX_TOOL_ROUNDS + 1):
+        # The first round must call a tool, so every answer is grounded in the
+        # user's documents instead of the model's memory of the conversation
+        # (which once produced a renewal date that exists in no document).
+        tool_config: dict[str, Any] = {"tools": toolbox.converse_tools}
+        if round_number == 0:
+            tool_config["toolChoice"] = {"any": {}}
         texts: dict[int, str] = {}
         tools: dict[int, dict[str, Any]] = {}
         stop_reason = None
@@ -114,7 +120,7 @@ async def run_turn(
             modelId=model_id,
             system=system,
             messages=messages,
-            toolConfig={"tools": toolbox.converse_tools},
+            toolConfig=tool_config,
             inferenceConfig={"maxTokens": 400, "temperature": 0.2},
         ):
             if "contentBlockStart" in event:

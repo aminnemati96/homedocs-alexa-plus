@@ -72,6 +72,9 @@ def test_tool_round_then_streamed_answer():
     # The user's date reaches the tool and the system prompt.
     assert toolbox.calls == [("list_upcoming_dates", {"days_ahead": 30, "today": "2026-10-06"})]
     assert "Tuesday, October 06, 2026" in seen[0]["system"][0]["text"]
+    # The first call must use a tool; later calls may answer in text.
+    assert seen[0]["toolConfig"]["toolChoice"] == {"any": {}}
+    assert "toolChoice" not in seen[1]["toolConfig"]
     # The second Bedrock call carries the tool result back to the model.
     assert seen[1]["messages"][-1]["content"][0]["toolResult"]["toolUseId"] == "t1"
     assert seen[1]["messages"][-2]["content"][0]["toolUse"]["input"] == {"days_ahead": 30}
