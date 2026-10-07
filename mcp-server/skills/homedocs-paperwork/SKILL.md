@@ -36,8 +36,12 @@ If it doesn't, pass the user's local date yourself when you know it.
    - "When is ... due / when does ... renew or expire" : `search_documents`, or
      `list_upcoming_dates` when the user asks what is coming up.
    - "What are my notifications?" : `list_upcoming_dates` with `days_ahead` 14.
-     For "anything else?" afterwards, look further ahead (about 90 days) and only
-     mention what they haven't heard yet.
+     Notifications are only what falls in those 14 days.
+   - "Any more notifications?" or "anything else?" afterwards: if nothing else is
+     due in the 14 days, say so first ("No other notifications"), then offer what
+     is coming later from `list_upcoming_dates` with about 90 days, without
+     calling those notifications. Only mention what they haven't heard yet, and
+     keep it to the next two or three items.
 3. If the passages don't answer the question, say so in one sentence. Don't fill
    the gap with general knowledge.
 
