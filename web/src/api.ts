@@ -82,3 +82,13 @@ export async function addDocument(file: File): Promise<{ steps: UploadStep[]; me
   if (!response.ok) throw new Error(body.detail ?? `Upload failed with ${response.status}`);
   return body;
 }
+
+export type Notification = { document_id: string; title: string; label: string; date: string; days_away: number };
+
+/** Upcoming dates for the notification ring, plus the MCP call that produced them. */
+export async function getNotifications(): Promise<{ items: Notification[]; tool: UploadStep }> {
+  const response = await fetch("/api/notifications");
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.detail ?? `Notifications failed with ${response.status}`);
+  return body;
+}

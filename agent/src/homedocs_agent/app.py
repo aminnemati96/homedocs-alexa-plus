@@ -125,6 +125,35 @@ async def add_document(file: UploadFile) -> dict:
     }
 
 
+NOTIFY_DAYS = 14
+
+
+@app.get("/api/notifications")
+async def notifications() -> dict:
+    """Dates due in the next two weeks, straight from the MCP server.
+
+    The web page lights the ring yellow when this is not empty, like an Echo
+    with a pending notification. No model call, so it is instant and free.
+    """
+    started = time.perf_counter()
+    try:
+        async with open_toolbox(config.MCP_URL) as toolbox:
+            result, is_error = await toolbox.call("list_upcoming_dates", {"days_ahead": NOTIFY_DAYS})
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(_root_cause(e))) from e
+    if is_error:
+        raise HTTPException(status_code=502, detail=result.get("text", "Lookup failed"))
+    return {
+        "items": result.get("result", []),
+        "tool": {
+            "name": "list_upcoming_dates",
+            "input": {"days_ahead": NOTIFY_DAYS},
+            "output": result,
+            "ms": round((time.perf_counter() - started) * 1000),
+        },
+    }
+
+
 @app.get("/api/health")
 async def health() -> dict:
     return {"ok": True, "model": config.MODEL_ID, "mcp": config.MCP_URL}

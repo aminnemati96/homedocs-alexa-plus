@@ -1,5 +1,5 @@
-import { useRef, useState, type FormEvent } from "react";
-import { addDocument, chat, speak, type Turn } from "./api";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { addDocument, chat, getNotifications, speak, type Notification, type Turn } from "./api";
 import { listenOnce, speechSupported } from "./speech";
 import Ring, { type RingState } from "./Ring";
 import ToolPanel, { type ToolRun } from "./ToolPanel";
@@ -19,9 +19,30 @@ export default function App() {
   const [tools, setTools] = useState<ToolRun[]>([]);
   const [error, setError] = useState("");
   const [voiceOn, setVoiceOn] = useState(true);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notificationsHeard, setNotificationsHeard] = useState(false);
   const stopListening = useRef<(() => void) | null>(null);
 
   const busy = ring !== "idle";
+  const notify = !busy && !notificationsHeard && notifications.length > 0;
+
+  // Like an Echo: check for due dates on start and light the ring yellow if any.
+  // The check is a plain MCP tool call, shown in the panel so viewers can see it.
+  async function refreshNotifications(showInPanel: boolean) {
+    try {
+      const { items, tool } = await getNotifications();
+      setNotifications(items);
+      if (showInPanel) {
+        setTools([{ id: "notifications", name: tool.name, input: tool.input, output: tool.output, isError: false, ms: tool.ms }]);
+      }
+    } catch {
+      // Notifications are a nice-to-have; the page works without them.
+    }
+  }
+
+  useEffect(() => {
+    void refreshNotifications(true);
+  }, []);
 
   async function ask(question: string) {
     const text = question.trim();
@@ -30,6 +51,7 @@ export default function App() {
       return;
     }
     const history = turns;
+    if (/notification|coming up|due soon/i.test(text)) setNotificationsHeard(true);
     setTurns([...history, { role: "user", text }]);
     setTools([]);
     setError("");
@@ -69,6 +91,8 @@ export default function App() {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setRing("idle");
+      // The answer may have saved a new document with new dates.
+      void refreshNotifications(false);
     }
   }
 
@@ -120,6 +144,8 @@ export default function App() {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setRing("idle");
+      setNotificationsHeard(false);
+      void refreshNotifications(false);
     }
   }
 
@@ -139,14 +165,18 @@ export default function App() {
           <span className="brand-sub">for Alexa+ (simulated)</span>
         </header>
 
-        <Ring state={ring} onClick={speechSupported ? onMic : undefined} />
+        <Ring state={ring} notify={notify} onClick={speechSupported ? onMic : undefined} />
 
         <p className="status" aria-live="polite">
           {ring === "listening" && (heard || "Listening...")}
           {ring === "thinking" && "Checking your documents..."}
           {ring === "speaking" && "Speaking"}
           {ring === "idle" &&
-            (speechSupported ? "Tap the ring and ask about your paperwork" : "Type a question below")}
+            (notify
+              ? `You have ${notifications.length} notification${notifications.length === 1 ? "" : "s"}. Ask "what are my notifications?"`
+              : speechSupported
+                ? "Tap the ring and ask about your paperwork"
+                : "Type a question below")}
         </p>
 
         <section className="conversation">
@@ -160,7 +190,7 @@ export default function App() {
 
         {turns.length === 0 && (
           <div className="suggestions">
-            {SUGGESTIONS.map((s) => (
+            {(notify ? ["What are my notifications?", ...SUGGESTIONS] : SUGGESTIONS).map((s) => (
               <button key={s} type="button" disabled={busy} onClick={() => void ask(s)}>
                 {s}
               </button>
