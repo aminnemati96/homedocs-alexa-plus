@@ -339,3 +339,27 @@ details summary {
   font-size: 12px;
   margin-top: 6px;
 }
+
+.upload {
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid #26344f;
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.upload:hover:not(.disabled) {
+  border-color: var(--accent);
+}
+
+.upload.disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.upload input {
+  display: none;
+}

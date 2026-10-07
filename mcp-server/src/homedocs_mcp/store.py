@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+import uuid
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Protocol
@@ -55,25 +56,55 @@ class UpcomingDate(BaseModel):
 class Searcher(Protocol):
     def search(self, query: str, top_k: int) -> list[SearchHit]: ...
 
+    def index(self, doc: Document) -> int: ...
+
 
 def load_documents(path: Path) -> list[Document]:
+    if not path.exists():
+        return []
     raw = json.loads(path.read_text(encoding="utf-8"))
     return [Document.model_validate(item) for item in raw]
 
 
+def new_document_id(title: str) -> str:
+    slug = "-".join(_WORD.findall(title.lower()))[:40].strip("-") or "document"
+    return f"{slug}-{uuid.uuid4().hex[:6]}"
+
+
 class DocumentStore:
-    def __init__(self, documents: list[Document]):
+    """Sample documents (read-only) plus documents the user added.
+
+    Added documents are saved to `user_path` so they survive restarts.
+    """
+
+    def __init__(self, documents: list[Document], user_path: Path | None = None):
         self._docs = {d.id: d for d in documents}
+        self._user_path = user_path
+        self._user_ids: list[str] = []
+        if user_path is not None:
+            for doc in load_documents(user_path):
+                self._docs[doc.id] = doc
+                self._user_ids.append(doc.id)
 
     @classmethod
-    def from_json(cls, path: Path) -> "DocumentStore":
-        return cls(load_documents(path))
+    def from_json(cls, path: Path, user_path: Path | None = None) -> "DocumentStore":
+        return cls(load_documents(path), user_path)
 
     def list_all(self) -> list[Document]:
         return list(self._docs.values())
 
     def get(self, document_id: str) -> Document | None:
         return self._docs.get(document_id)
+
+    def add(self, doc: Document) -> None:
+        if doc.id in self._docs:
+            raise ValueError(f"A document with id '{doc.id}' already exists")
+        self._docs[doc.id] = doc
+        self._user_ids.append(doc.id)
+        if self._user_path is not None:
+            user_docs = [self._docs[i].model_dump(mode="json") for i in self._user_ids]
+            self._user_path.parent.mkdir(parents=True, exist_ok=True)
+            self._user_path.write_text(json.dumps(user_docs, indent=2), encoding="utf-8")
 
     def upcoming(self, days_ahead: int, today: date | None = None) -> list[UpcomingDate]:
         today = today or date.today()
@@ -102,7 +133,11 @@ class KeywordSearcher:
     """Ranks whole documents by word overlap with the query. No network needed."""
 
     def __init__(self, documents: list[Document]):
-        self._docs = documents
+        self._docs = list(documents)
+
+    def index(self, doc: Document) -> int:
+        self._docs.append(doc)
+        return 1
 
     def search(self, query: str, top_k: int = 3) -> list[SearchHit]:
         query_tokens = _tokens(query)

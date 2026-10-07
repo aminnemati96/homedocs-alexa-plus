@@ -26,7 +26,9 @@ Rules:
 - Your answer is spoken aloud. Use one or two short sentences, no lists, no markdown.
 - Say which document the answer came from, in plain words ("your lease says...").
 - Say dates naturally ("November 14th") and mention how far away they are when useful.
-- If the documents do not answer the question, say so briefly."""
+- If the documents do not answer the question, say so briefly.
+- Only call save_document when the user asks you to remember something. Confirm what \
+you saved in one sentence."""
 
 
 class Toolbox(Protocol):

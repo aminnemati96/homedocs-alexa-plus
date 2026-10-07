@@ -5,10 +5,16 @@ from __future__ import annotations
 from mcp.server.fastmcp import FastMCP
 
 from homedocs_mcp import config
-from homedocs_mcp.store import Document, DocumentStore, SearchHit, UpcomingDate
+from homedocs_mcp.store import (
+    Document,
+    KeyDate,
+    SearchHit,
+    UpcomingDate,
+    new_document_id,
+)
 
-store = DocumentStore.from_json(config.DATA_PATH)
-searcher = config.make_searcher()
+store = config.make_store()
+searcher = config.make_searcher(store)
 
 mcp = FastMCP(
     "homedocs",
@@ -50,6 +56,34 @@ def get_document(document_id: str) -> Document:
     doc = store.get(document_id)
     if doc is None:
         raise ValueError(f"No document with id '{document_id}'")
+    return doc
+
+
+@mcp.tool(title="Save document")
+def save_document(
+    title: str,
+    category: str,
+    text: str,
+    provider: str = "",
+    key_dates: list[KeyDate] | None = None,
+) -> Document:
+    """Save a new document or note so it can be searched and reminded about later.
+
+    Use when the user uploads a document, or explicitly asks you to remember
+    something ("remember my car registration renews May 3rd"). Category is one of:
+    insurance, warranty, housing, bill, identity, vehicle, medical, other.
+    key_dates holds renewals, expiries and due dates as ISO dates (YYYY-MM-DD).
+    """
+    doc = Document(
+        id=new_document_id(title),
+        title=title,
+        category=category,
+        provider=provider,
+        key_dates=key_dates or [],
+        text=text,
+    )
+    store.add(doc)
+    searcher.index(doc)
     return doc
 
 

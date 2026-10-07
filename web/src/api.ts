@@ -70,3 +70,15 @@ export async function speak(text: string): Promise<void> {
     URL.revokeObjectURL(url);
   }
 }
+
+export type UploadStep = { name: string; input: Record<string, unknown>; output: unknown; ms: number };
+
+/** Upload a PDF or photo; the agent extracts it with Bedrock and saves it via MCP. */
+export async function addDocument(file: File): Promise<{ steps: UploadStep[]; message: string }> {
+  const form = new FormData();
+  form.append("file", file);
+  const response = await fetch("/api/documents", { method: "POST", body: form });
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.detail ?? `Upload failed with ${response.status}`);
+  return body;
+}

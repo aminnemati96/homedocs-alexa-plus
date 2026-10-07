@@ -26,7 +26,9 @@ def main() -> int:
     searcher = config.make_vector_searcher()
     try:
         searcher.ensure_collection()
-        for doc in load_documents(args.path):
+        # User-added documents are indexed when saved; re-indexing them here
+        # rebuilds everything after a Qdrant reset.
+        for doc in load_documents(args.path) + load_documents(config.USER_DATA_PATH):
             count = searcher.index(doc)
             print(f"{doc.id}: {count} passages")
     except (ClientError, BotoCoreError) as e:

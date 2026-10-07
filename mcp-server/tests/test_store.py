@@ -1,7 +1,14 @@
 from datetime import date
 from pathlib import Path
 
-from homedocs_mcp.store import DocumentStore, KeywordSearcher, load_documents
+from homedocs_mcp.store import (
+    Document,
+    DocumentStore,
+    KeyDate,
+    KeywordSearcher,
+    load_documents,
+    new_document_id,
+)
 
 DATA = Path(__file__).resolve().parents[1] / "data" / "sample_documents.json"
 
@@ -31,3 +38,26 @@ def test_upcoming_is_sorted_and_bounded():
         "dishwasher-warranty",
     ]
     assert upcoming[0].days_away == 9
+
+
+def test_added_documents_persist_across_restarts(tmp_path):
+    user_file = tmp_path / "user_documents.json"
+    doc = Document(
+        id=new_document_id("Car registration"),
+        title="Car registration",
+        category="vehicle",
+        provider="",
+        key_dates=[KeyDate(label="Registration renews", date=date(2027, 5, 3))],
+        text="Registration for the Honda Civic renews May 3, 2027.",
+    )
+    DocumentStore.from_json(DATA, user_file).add(doc)
+
+    reopened = DocumentStore.from_json(DATA, user_file)
+    assert reopened.get(doc.id) == doc
+    assert len(reopened.list_all()) == len(load_documents(DATA)) + 1
+
+
+def test_new_document_id_is_a_unique_slug():
+    first = new_document_id("Home Insurance (2026)!")
+    assert first.startswith("home-insurance-2026-")
+    assert first != new_document_id("Home Insurance (2026)!")

@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from "react";
-import { chat, speak, type Turn } from "./api";
+import { addDocument, chat, speak, type Turn } from "./api";
 import { listenOnce, speechSupported } from "./speech";
 import Ring, { type RingState } from "./Ring";
 import ToolPanel, { type ToolRun } from "./ToolPanel";
@@ -92,6 +92,37 @@ export default function App() {
     }
   }
 
+  async function onUpload(file: File) {
+    if (busy) return;
+    setTurns((all) => [...all, { role: "user", text: `Added ${file.name}` }]);
+    setTools([{ id: "upload", name: "bedrock_extract", input: { file: file.name } }]);
+    setError("");
+    setRing("thinking");
+    try {
+      const { steps, message } = await addDocument(file);
+      setTools(
+        steps.map((step, i) => ({
+          id: `upload-${i}`,
+          name: step.name,
+          input: step.input,
+          output: step.output,
+          isError: false,
+          ms: step.ms,
+        })),
+      );
+      setTurns((all) => [...all, { role: "assistant", text: message }]);
+      if (voiceOn) {
+        setRing("speaking");
+        await speak(message);
+      }
+    } catch (e) {
+      setTools([]);
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRing("idle");
+    }
+  }
+
   function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (busy) return;
@@ -147,6 +178,19 @@ export default function App() {
           <button type="submit" disabled={busy || !typed.trim()}>
             Ask
           </button>
+          <label className={`upload ${busy ? "disabled" : ""}`} title="Add a PDF or a photo of a document">
+            Add document
+            <input
+              type="file"
+              accept="application/pdf,image/png,image/jpeg,image/webp"
+              disabled={busy}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (file) void onUpload(file);
+              }}
+            />
+          </label>
           <label className="voice-toggle">
             <input type="checkbox" checked={voiceOn} onChange={(e) => setVoiceOn(e.target.checked)} />
             Voice
