@@ -92,5 +92,25 @@ def test_gives_up_after_too_many_tool_rounds():
 
 
 def test_build_messages_skips_empty_turns():
-    messages = build_messages([{"role": "user", "text": "hi"}, {"role": "assistant", "text": ""}], "next")
-    assert [m["content"][0]["text"] for m in messages] == ["hi", "next"]
+    history = [{"role": "user", "text": "hi"}, {"role": "assistant", "text": ""}, {"role": "assistant", "text": "hello"}]
+    messages = build_messages(history, "next")
+    assert [m["content"][0]["text"] for m in messages] == ["hi", "hello", "next"]
+
+
+def test_build_messages_merges_repeated_roles_and_starts_with_user():
+    history = [
+        {"role": "assistant", "text": "Hello"},
+        {"role": "user", "text": "Added bill.pdf"},  # upload failed: no assistant reply
+        {"role": "user", "text": "is it saved?"},
+        {"role": "assistant", "text": "No."},
+    ]
+    messages = build_messages(history, "try again")
+    assert [m["role"] for m in messages] == ["user", "assistant", "user"]
+    assert messages[0]["content"][0]["text"] == "Added bill.pdf\nis it saved?"
+
+
+def test_build_messages_keeps_only_recent_history():
+    history = [{"role": r, "text": str(i)} for i in range(50) for r in ("user", "assistant")]
+    messages = build_messages(history, "latest")
+    assert len(messages) <= 21
+    assert messages[-1]["content"][0]["text"] == "latest"

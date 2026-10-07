@@ -51,14 +51,27 @@ class Toolbox(Protocol):
 ConverseStreamFn = Callable[..., dict[str, Any]]
 
 
+MAX_HISTORY_TURNS = 20
+
+
 def build_messages(history: list[dict[str, str]], user_text: str) -> list[dict[str, Any]]:
-    """History is a list of {"role": "user"|"assistant", "text": ...} from the browser."""
-    messages = [
-        {"role": turn["role"], "content": [{"text": turn["text"]}]}
-        for turn in history
-        if turn.get("text")
-    ]
-    messages.append({"role": "user", "content": [{"text": user_text}]})
+    """History is a list of {"role": "user"|"assistant", "text": ...} from the browser.
+
+    Converse requires the conversation to start with the user and alternate
+    roles, but the browser's history can break that: a failed upload or an error
+    leaves two user turns in a row. Consecutive turns from the same role are
+    merged, and only the most recent turns are kept.
+    """
+    turns = [t for t in history if t.get("text")][-MAX_HISTORY_TURNS:]
+    turns.append({"role": "user", "text": user_text})
+    messages: list[dict[str, Any]] = []
+    for turn in turns:
+        if messages and messages[-1]["role"] == turn["role"]:
+            messages[-1]["content"][0]["text"] += "\n" + turn["text"]
+        else:
+            messages.append({"role": turn["role"], "content": [{"text": turn["text"]}]})
+    while messages and messages[0]["role"] != "user":
+        messages.pop(0)
     return messages
 
 

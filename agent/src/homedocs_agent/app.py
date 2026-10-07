@@ -62,7 +62,8 @@ class Turn(BaseModel):
 
 class ChatRequest(BaseModel):
     text: str = Field(min_length=1, max_length=1000)
-    history: list[Turn] = Field(default_factory=list, max_length=20)
+    # Long conversations are fine: run_turn keeps only the most recent turns.
+    history: list[Turn] = Field(default_factory=list, max_length=200)
     # The browser's local date. Servers run on UTC, which is already tomorrow
     # for North American users in the evening.
     today: date | None = None
