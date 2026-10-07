@@ -14,5 +14,10 @@ infra/*.tfstate
 infra/*.tfstate.*
 infra/*.tfvars
 
-# Private notes, kept out of the public repo
+# Personal submission notes, kept out of the public repo
 docs/demo-script.md
+docs/writeup.md
+docs/product-feedback.md
+docs/submission-checklist.md
+# Rendered samples carry the author's name in their metadata; the HTML sources are enough
+samples/*.pdf
