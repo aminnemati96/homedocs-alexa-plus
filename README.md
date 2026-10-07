@@ -106,7 +106,7 @@ demo passcode because every question costs Bedrock usage.
 | [`web/`](web/) | The Alexa+ simulator (React, Vite, TypeScript) |
 | [`infra/`](infra/) | Terraform for everything on AWS |
 | [`samples/`](samples/) | Fictional documents for testing and the demo |
-| [`docs/`](docs/) | Write-up, product feedback, friction log, demo script |
+| [`docs/`](docs/) | Write-up, product feedback and friction log |
 
 ## Run it locally
 
