@@ -13,3 +13,6 @@ infra/.terraform/
 infra/*.tfstate
 infra/*.tfstate.*
 infra/*.tfvars
+
+# Private notes, kept out of the public repo
+docs/demo-script.md
