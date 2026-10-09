@@ -54,3 +54,14 @@ On Lambda all of these are set by `../infra/agent.tf`.
 ```
 uv run pytest
 ```
+
+`evals/scenarios.py` runs 37 end-to-end checks against a live MCP server and real
+Bedrock: notifications and follow-ups, answers with known facts, unknown questions,
+save, recall and delete by voice, upload extraction, MCP tool edge cases, and that
+"remove" inside an ordinary question never deletes anything. It checks what actually
+happened (tools called, documents stored), not just what the model said, and cleans
+up after itself.
+
+```
+uv run python evals/scenarios.py
+```
