@@ -28,15 +28,24 @@ simulates an Alexa+ device** for the demo.
 
 ## About the demo data
 
-The five sample documents (car insurance, dishwasher warranty, lease, internet bill,
-passport) are made up, and **their dates are offsets from today**, not fixed dates:
-the internet bill is always due in 6 days, the dishwasher warranty always ends in
-20 days, the car insurance always renews in 36 days, and so on. They are filled in
-when the samples load, and the public demo reloads them every night, so whenever you
-try it there is one notification due soon and a few more dates coming up. This is
-on purpose, not a bug. Documents you add keep their real dates and are cleared by
-the nightly reset. The offsets are in
-[`mcp-server/data/sample_documents.json`](mcp-server/data/sample_documents.json).
+The public demo's database always starts with **five made-up sample documents**: car
+insurance, dishwasher warranty, apartment lease, internet bill and passport.
+
+- **Their dates are offsets from today**, not fixed dates: the internet bill is always
+  due in 6 days, the dishwasher warranty always ends in 20 days, the car insurance
+  always renews in 36 days, and so on. Whenever you try it, there is one notification
+  due soon and a few more dates coming up. This is on purpose, not a bug.
+- **Every night at 4 AM (Atlantic time)** a scheduled job resets the demo: it deletes
+  every document added during the day (uploads and spoken notes, with their search
+  passages), then reloads the five samples, recalculating their dates for the new day
+  and re-indexing them for search. So each day starts from the same five documents,
+  and one visitor's documents never stay for the next.
+- Documents you add keep their real dates until that reset.
+
+The offsets are in
+[`mcp-server/data/sample_documents.json`](mcp-server/data/sample_documents.json), and
+the reset is the `admin_reset_demo` MCP tool (hidden from the model) run by an
+EventBridge schedule in [`infra/warmup.tf`](infra/warmup.tf).
 The uploadable test documents in [`samples/`](samples/) work the same way: open one
 in a browser and it shows dates relative to that day, then save it as a PDF or take a
 screenshot to upload.

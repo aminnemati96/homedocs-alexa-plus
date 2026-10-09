@@ -13,7 +13,7 @@ about household paperwork: bills, leases, warranties, insurance and ID documents
 | `get_document` | Full text of one document | read-only |
 | `save_document` | Stores a new document or note and indexes it | adds data |
 | `delete_document` | Removes a document and its passages | removes data |
-| `admin_reset_demo` | Restores the sample documents (only when `HOMEDOCS_ADMIN_TOOLS=true`) | removes data |
+| `admin_reset_demo` | Deletes every non-sample document and its passages, then reloads and re-indexes the five samples with fresh dates (only when `HOMEDOCS_ADMIN_TOOLS=true`; the agent never shows it to the model) | removes data |
 
 ## Agent Skill
 
