@@ -21,6 +21,15 @@ about household paperwork: bills, leases, warranties, insurance and ID documents
 agent how to use these tools by voice ([Agent Skills](https://agentskills.io) format).
 The server also serves it as the MCP resource `skill://homedocs-paperwork/SKILL.md`.
 
+## Sample data with rolling dates
+
+`data/sample_documents.json` writes dates as offsets from today: `{date:+6}` becomes
+"October 15, 2026" if today is October 9, `{iso:+6}` the same as `2026-10-15`, and
+`{month:-15}` the month of 15 days ago. They are filled in whenever the samples are
+loaded (`homedocs-ingest`, local start-up, and `admin_reset_demo`, which the public
+demo runs nightly), so the demo always has something due soon. Documents users add
+keep their real dates.
+
 ## How search works
 
 Each document is split into short overlapping passages. Each passage is embedded

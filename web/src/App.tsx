@@ -337,6 +337,10 @@ export default function App() {
             Voice
           </label>
         </form>
+        <p className="demo-note">
+          Demo data: the sample documents use dates relative to today, so something is always
+          coming up. Anything you add is cleared nightly.
+        </p>
       </main>
 
       <ToolPanel runs={tools} thinking={ring === "thinking"} />

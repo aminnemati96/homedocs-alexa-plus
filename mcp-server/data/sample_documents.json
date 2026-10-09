@@ -1,13 +1,13 @@
 [
   {
-    "id": "auto-insurance-2026",
+    "id": "car-insurance",
     "title": "Car insurance policy (2025 Corvane sedan)",
     "category": "insurance",
     "provider": "Maple Shield Insurance",
     "key_dates": [
-      {"label": "Policy renewal", "date": "2026-11-14"}
+      {"label": "Policy renewal", "date": "{iso:+36}"}
     ],
-    "text": "Policy number MS-448210. Covers the 2025 Corvane C5 sedan. Annual premium is $1,860, paid monthly at $155. Deductible is $500 for collision and $300 for comprehensive. Roadside assistance is included. The policy renews on November 14, 2026. To cancel, give 30 days written notice."
+    "text": "Policy number MS-448210. Covers the 2025 Corvane C5 sedan. Annual premium is $1,860, paid monthly at $155. Deductible is $500 for collision and $300 for comprehensive. Roadside assistance is included. The policy renews on {date:+36}. To cancel, give 30 days written notice."
   },
   {
     "id": "dishwasher-warranty",
@@ -15,9 +15,9 @@
     "category": "warranty",
     "provider": "HomeCare Protect",
     "key_dates": [
-      {"label": "Warranty expires", "date": "2026-10-29"}
+      {"label": "Warranty expires", "date": "{iso:+20}"}
     ],
-    "text": "Extended warranty for the Kelvra 300 Series dishwasher, serial KD300-58217. Covers parts and labour for mechanical and electrical failures. Does not cover cosmetic damage or damage from improper installation. Coverage ends October 29, 2026. To make a claim, call 1-800-555-0142 with the serial number and proof of purchase."
+    "text": "Extended warranty for the Kelvra 300 Series dishwasher, serial KD300-58217. Covers parts and labour for mechanical and electrical failures. Does not cover cosmetic damage or damage from improper installation. Coverage ends {date:+20}. To make a claim, call 1-800-555-0142 with the serial number and proof of purchase."
   },
   {
     "id": "apartment-lease",
@@ -25,21 +25,21 @@
     "category": "housing",
     "provider": "Harbourview Properties",
     "key_dates": [
-      {"label": "Lease ends", "date": "2027-06-30"},
-      {"label": "Notice to leave or renew due", "date": "2027-03-31"}
+      {"label": "Lease ends", "date": "{iso:+264}"},
+      {"label": "Notice to leave or renew due", "date": "{iso:+173}"}
     ],
-    "text": "Fixed-term lease for Unit 304 from July 1, 2026 to June 30, 2027. Monthly rent is $1,950, due on the first of each month. Heat and water are included; electricity is not. One small pet is allowed with a $300 pet deposit. Tenant must give three months written notice before the end of the term to leave or renew."
+    "text": "Fixed-term lease for Unit 304 from {date:-100} to {date:+264}. Monthly rent is $1,950, due on the first of each month. Heat and water are included; electricity is not. One small pet is allowed with a $300 pet deposit. Tenant must give three months written notice before the end of the term to leave or renew, by {date:+173}."
   },
   {
-    "id": "internet-bill-sep-2026",
-    "title": "Internet bill, September 2026",
+    "id": "internet-bill",
+    "title": "Internet bill, {month:-15}",
     "category": "bill",
     "provider": "Northwind Fibre",
     "key_dates": [
-      {"label": "Payment due", "date": "2026-10-15"},
-      {"label": "Promotional rate ends", "date": "2026-12-01"}
+      {"label": "Payment due", "date": "{iso:+6}"},
+      {"label": "Promotional rate ends", "date": "{iso:+53}"}
     ],
-    "text": "Fibre 500 plan. Amount due $85.00 by October 15, 2026. The promotional rate of $85 per month ends December 1, 2026, after which the regular rate is $110 per month. Wi-Fi network name is Unit304-Home."
+    "text": "Fibre 500 plan. Amount due $85.00 by {date:+6}. The promotional rate of $85 per month ends {date:+53}, after which the regular rate is $110 per month. Wi-Fi network name is Unit304-Home."
   },
   {
     "id": "passport",
@@ -47,8 +47,8 @@
     "category": "identity",
     "provider": "Government of Canada",
     "key_dates": [
-      {"label": "Passport expires", "date": "2027-02-20"}
+      {"label": "Passport expires", "date": "{iso:+134}"}
     ],
-    "text": "Canadian passport, 10-year validity. Expires February 20, 2027. Many countries require at least six months of validity remaining to enter, so travel after August 20, 2026 may need a renewed passport. Simplified renewal is available if the current passport was issued in the last 15 years."
+    "text": "Canadian passport, 10-year validity. Expires {date:+134}. Many countries require at least six months of validity remaining to enter, so travel after {date:-50} may need a renewed passport. Simplified renewal is available if the current passport was issued in the last 15 years."
   }
 ]

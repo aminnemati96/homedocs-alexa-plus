@@ -439,3 +439,11 @@ details summary {
   border-color: #ffc21a;
   color: #ffd862;
 }
+
+.demo-note {
+  margin: 0;
+  max-width: 560px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}

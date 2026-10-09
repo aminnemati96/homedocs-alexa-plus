@@ -61,11 +61,30 @@ class Searcher(Protocol):
     def delete(self, doc: Document) -> None: ...
 
 
-def load_documents(path: Path) -> list[Document]:
+# Rolling dates for the sample documents: "{date:+6}" is six days from today as
+# "October 15, 2026", "{iso:+6}" the same as 2026-10-15, and "{month:-15}" the
+# month of 15 days ago as "September 2026". The demo always has something due
+# soon, whatever day it is viewed; the nightly reset reloads the samples daily.
+_RELATIVE = re.compile(r"\{(date|iso|month):([+-]\d+)\}")
+
+
+def resolve_relative_dates(text: str, today: date) -> str:
+    def replace(match: re.Match[str]) -> str:
+        day = today + timedelta(days=int(match.group(2)))
+        if match.group(1) == "iso":
+            return day.isoformat()
+        if match.group(1) == "month":
+            return day.strftime("%B %Y")
+        return f"{day.strftime('%B')} {day.day}, {day.year}"
+
+    return _RELATIVE.sub(replace, text)
+
+
+def load_documents(path: Path, today: date | None = None) -> list[Document]:
     if not path.exists():
         return []
-    raw = json.loads(path.read_text(encoding="utf-8"))
-    return [Document.model_validate(item) for item in raw]
+    text = resolve_relative_dates(path.read_text(encoding="utf-8"), today or date.today())
+    return [Document.model_validate(item) for item in json.loads(text)]
 
 
 def new_document_id(title: str) -> str:
@@ -89,8 +108,8 @@ class DocumentStore:
                 self._user_ids.append(doc.id)
 
     @classmethod
-    def from_json(cls, path: Path, user_path: Path | None = None) -> "DocumentStore":
-        return cls(load_documents(path), user_path)
+    def from_json(cls, path: Path, user_path: Path | None = None, today: date | None = None) -> "DocumentStore":
+        return cls(load_documents(path, today), user_path)
 
     def list_all(self) -> list[Document]:
         return list(self._docs.values())

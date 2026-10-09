@@ -3,6 +3,10 @@
 Fictional household documents for testing uploads and for the demo video.
 All companies, account numbers and people are made up.
 
+These pages have fixed dates, because they stand in for real paper documents you
+upload. The five documents preloaded in the app are different: they use dates
+relative to today (see `mcp-server/data/sample_documents.json`).
+
 Turn each page into a test file:
 
 - **PDF:** open the `.html` file in Edge or Chrome, press Ctrl+P, choose "Save as PDF".

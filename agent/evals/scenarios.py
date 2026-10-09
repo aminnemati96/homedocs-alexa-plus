@@ -16,7 +16,7 @@ import json
 import re
 import sys
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 from homedocs_agent import aws, config
@@ -24,8 +24,20 @@ from homedocs_agent.agent import run_turn
 from homedocs_agent.connection import open_mcp
 from homedocs_agent.extract import extract
 
-TODAY = date(2026, 10, 9)
-SAMPLES = {"passport", "internet-bill-sep-2026", "apartment-lease", "dishwasher-warranty", "auto-insurance-2026"}
+# The samples use rolling dates (offsets from today, see mcp-server/data), so the
+# checks use the real date and work out the expected dates from the same offsets.
+TODAY = date.today()
+SAMPLES = {"passport", "internet-bill", "apartment-lease", "dishwasher-warranty", "car-insurance"}
+
+
+def spoken(days: int) -> str:
+    day = TODAY + timedelta(days=days)
+    return f"{day.strftime('%B').lower()} {day.day}"
+
+
+def next_november_first() -> str:
+    year = TODAY.year if TODAY < date(TODAY.year, 11, 1) else TODAY.year + 1
+    return date(year, 11, 1).isoformat()
 RECEIPT = Path(__file__).resolve().parents[2] / "samples" / "laptop-receipt.png"
 
 
@@ -94,10 +106,10 @@ async def conversation_checks() -> None:
     # Questions with known answers
     facts = [
         ("Can I have a cat in my apartment?", ["300"]),
-        ("When does my car insurance renew?", ["november 14"]),
+        ("When does my car insurance renew?", [spoken(36)]),
         ("How much is my rent?", ["1,950"]),
         ("Is heat included in my rent?", ["heat"]),
-        ("When does my passport expire?", ["february 20"]),
+        ("When does my passport expire?", [spoken(134)]),
         ("What's my wifi network name?", ["unit304-home"]),
         ("What's my collision deductible?", ["500"]),
     ]
@@ -123,7 +135,7 @@ async def conversation_checks() -> None:
     check("save: save_document called and stored", "save_document" in names(t) and len(gym) == 1, f"{names(t)} {list(docs)}")
     if gym:
         dates = [k["date"] for k in gym[0]["key_dates"]]
-        check("save: stores 2026-11-01", "2026-11-01" in dates, str(dates))
+        check("save: stores the next November 1st", next_november_first() in dates, str(dates))
     t = await ask("When does my gym membership renew?")
     check("recall: finds the saved note", "november 1" in t.answer.lower(), t.answer)
     t = await ask("Forget my gym membership.")
@@ -150,9 +162,10 @@ async def upload_checks() -> None:
 
 
 async def mcp_checks() -> None:
-    up, _ = await call("list_upcoming_dates", {"days_ahead": 14, "today": "2026-10-09"})
-    check("mcp: 14-day window from Oct 9 is only the internet bill", [u["document_id"] for u in up["result"]] == ["internet-bill-sep-2026"], str(up))
-    up, _ = await call("list_upcoming_dates", {"days_ahead": 1, "today": "2026-10-15"})
+    up, _ = await call("list_upcoming_dates", {"days_ahead": 14, "today": TODAY.isoformat()})
+    check("mcp: 14-day window is only the internet bill (in 6 days)",
+          [(u["document_id"], u["days_away"]) for u in up["result"]] == [("internet-bill", 6)], str(up))
+    up, _ = await call("list_upcoming_dates", {"days_ahead": 1, "today": (TODAY + timedelta(days=6)).isoformat()})
     check("mcp: due today has days_away 0", up["result"] and up["result"][0]["days_away"] == 0, str(up))
     hits, _ = await call("search_documents", {"query": "rent", "top_k": 50})
     check("mcp: top_k is capped at 10", len(hits["result"]) <= 10, str(len(hits["result"])))

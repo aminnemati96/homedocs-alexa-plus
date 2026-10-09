@@ -26,6 +26,18 @@ simulates an Alexa+ device** for the demo.
 - **Shows its work.** A side panel lists every MCP tool call live, with inputs,
   timing and results.
 
+## About the demo data
+
+The five sample documents (car insurance, dishwasher warranty, lease, internet bill,
+passport) are made up, and **their dates are offsets from today**, not fixed dates:
+the internet bill is always due in 6 days, the dishwasher warranty always ends in
+20 days, the car insurance always renews in 36 days, and so on. They are filled in
+when the samples load, and the public demo reloads them every night, so whenever you
+try it there is one notification due soon and a few more dates coming up. This is
+on purpose, not a bug. Documents you add keep their real dates and are cleared by
+the nightly reset. The offsets are in
+[`mcp-server/data/sample_documents.json`](mcp-server/data/sample_documents.json).
+
 ## Architecture
 
 ```mermaid
