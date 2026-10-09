@@ -20,19 +20,19 @@
 <body>
 <header>
   <div class="logo">Bright<span>water</span> Power</div>
-  <div>Statement date: October 3, 2026<br>Account: 7710-4482-09</div>
+  <div>Statement date: <span data-days="-6" data-format="long"></span><br>Account: 7710-4482-09</div>
 </header>
 
 <p>Unit 304, 18 Harbour Street<br>Halifax, NS B3J 0A1</p>
 
 <div class="box due">
   Amount due: <strong>$112.40</strong><br>
-  Due date: <strong>October 28, 2026</strong><br>
+  Due date: <strong><span data-days="19" data-format="long"></span></strong><br>
   <small>A late payment charge of 1.5% per month applies to balances not paid by the due date.</small>
 </div>
 
 <div class="box">
-  <b>Billing period:</b> September 1 to September 30, 2026 (30 days)<br>
+  <b>Billing period:</b> <span data-days="-21" data-format="month"></span> (30 days)<br>
   <b>Rate plan:</b> Residential Time-of-Day
   <table>
     <tr><th>Charge</th><th class="n">Amount</th></tr>
@@ -45,14 +45,15 @@
 </div>
 
 <div class="box">
-  <b>Your usage:</b> 612 kWh this month, up 18% from August because of air conditioning.
+  <b>Your usage:</b> 612 kWh this month, up 18% from the month before because of air conditioning.
   The average daily cost was $3.75.<br><br>
-  <b>Equal Payment Plan:</b> You are not enrolled. Enroll before November 15, 2026 to spread
+  <b>Equal Payment Plan:</b> You are not enrolled. Enroll before <span data-days="37" data-format="long"></span> to spread
   winter heating costs evenly over 12 months.
 </div>
 
 <p><small>Questions? Call 1-800-555-0198, Monday to Friday, 8 am to 8 pm.
 Power outages: 1-800-555-0199, 24 hours.
 Pay online, through your bank (payee "Brightwater Power"), or by pre-authorized debit.</small></p>
+<script src="rolling-dates.js"></script>
 </body>
 </html>

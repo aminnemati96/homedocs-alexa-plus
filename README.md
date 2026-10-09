@@ -37,6 +37,9 @@ try it there is one notification due soon and a few more dates coming up. This i
 on purpose, not a bug. Documents you add keep their real dates and are cleared by
 the nightly reset. The offsets are in
 [`mcp-server/data/sample_documents.json`](mcp-server/data/sample_documents.json).
+The uploadable test documents in [`samples/`](samples/) work the same way: open one
+in a browser and it shows dates relative to that day, then save it as a PDF or take a
+screenshot to upload.
 
 ## Architecture
 

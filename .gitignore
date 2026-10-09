@@ -19,5 +19,8 @@ docs/demo-script.md
 docs/writeup.md
 docs/product-feedback.md
 docs/submission-checklist.md
-# Rendered samples carry the author's name in their metadata; the HTML sources are enough
+# Make PDFs and screenshots from the sample pages on the day you use them
+# (their dates are relative to today), so don't commit them
 samples/*.pdf
+samples/*.png
+samples/*.jpg

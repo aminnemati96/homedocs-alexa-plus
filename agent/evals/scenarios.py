@@ -38,6 +38,8 @@ def spoken(days: int) -> str:
 def next_november_first() -> str:
     year = TODAY.year if TODAY < date(TODAY.year, 11, 1) else TODAY.year + 1
     return date(year, 11, 1).isoformat()
+# A screenshot of samples/laptop-receipt.html taken today (its dates are relative
+# to the day it is opened). Not in git; the upload checks are skipped without it.
 RECEIPT = Path(__file__).resolve().parents[2] / "samples" / "laptop-receipt.png"
 
 
@@ -147,12 +149,16 @@ async def conversation_checks() -> None:
 
 
 async def upload_checks() -> None:
+    if not RECEIPT.exists():
+        print("SKIP upload checks: save a screenshot of samples/laptop-receipt.html as samples/laptop-receipt.png")
+        return
     fields = extract(aws.bedrock().converse, config.MODEL_ID, "image/png", RECEIPT.read_bytes(), TODAY)
     text = fields["text"].lower()
     check("upload: title names the laptop", "lumora" in fields["title"].lower() or "laptop" in fields["title"].lower(), fields["title"])
     check("upload: 'one claim per year', not '$1'", "$1 claim" not in text and ("one claim" in text or "1 claim" in text), fields["text"])
     dates = {k["date"] for k in fields["key_dates"]}
-    check("upload: warranty dates extracted", {"2026-11-20", "2027-11-20"} <= dates, str(dates))
+    expected = {(TODAY + timedelta(days=42)).isoformat(), (TODAY + timedelta(days=407)).isoformat()}
+    check("upload: warranty dates extracted (screenshot must be from today)", expected <= dates, f"{dates} vs {expected}")
     check("upload: no real brand names", not re.search(r"asus|zenbook|visa|mic mac", text), fields["text"])
     saved, err = await call("save_document", fields)
     check("upload: saved", not err and "id" in saved, str(saved)[:200])
