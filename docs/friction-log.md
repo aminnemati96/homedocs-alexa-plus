@@ -71,3 +71,23 @@ Problems hit while building HomeDocs with Amazon tools, in the order they happen
 - **Severity:** Medium.
 - **Workaround:** function URL with auth `NONE`, plus a secret header that CloudFront adds and the app checks.
 - **Suggestion:** let CloudFront compute the payload hash for OAC-signed requests to Lambda.
+
+## 9. A kept-warm AgentCore session keeps running the old server version after a deploy
+
+- **Task:** ship a new version of the MCP server (an updated Agent Skill) to AgentCore Runtime.
+- **Steps:** push a new image, update the runtime with Terraform, ask the agent the same question again.
+- **Expected:** the next request uses the new version.
+- **Actual:** the agent reuses one `Mcp-Session-Id` per Lambda container (to avoid cold starts), and that session kept answering with the previous version's behaviour after the update. Sessions can live for hours, so a deploy can look like it did nothing.
+- **Severity:** Medium. It looked like the fix hadn't worked.
+- **Workaround:** pass the runtime version to the Lambda as an environment variable, so every MCP deploy restarts the Lambda and starts a fresh session.
+- **Suggestion:** document how existing sessions behave across runtime updates, and offer a way to end sessions on deploy (or return a header with the version that served the request).
+
+## 10. `docker login` to ECR fails on Windows with "The stub received bad data"
+
+- **Task:** log Docker in to ECR from PowerShell on Windows 11 to push an image.
+- **Steps:** `aws ecr get-login-password | docker login --username AWS --password-stdin <registry>`.
+- **Expected:** "Login Succeeded".
+- **Actual:** `error saving credentials: error storing credentials - err: exit status 1, out: The stub received bad data.` The push then fails with an expired token. It had worked the day before. The same session also hit a dropped connection (`EOF`) to `public.ecr.aws` once, which a retry fixed.
+- **Severity:** Medium. It blocks every deploy until worked around.
+- **Workaround:** use a separate Docker config folder with a placeholder `auths` entry, so Docker stores the ECR token in that file instead of the Windows credential store.
+- **Suggestion:** mention this Windows failure in the ECR authentication docs, and ship the Amazon ECR credential helper for Windows in Docker Desktop or the AWS CLI installer.
