@@ -133,3 +133,18 @@ def test_delete_only_runs_when_the_user_asked_for_it():
     converse_stream, _ = scripted(DELETE, ANSWER)
     collect(run_turn(converse_stream, "model", toolbox, [], "please forget my old lease"))
     assert [name for name, _ in toolbox.calls] == ["delete_document"]
+
+
+LIST = ([{"toolUse": {"toolUseId": "l1", "name": "list_documents", "input": {}}}], "tool_use")
+CLAIM = ([{"text": "Deleted your laptop receipt."}], "end_turn")
+
+
+def test_a_delete_request_must_call_delete_before_answering():
+    converse_stream, seen = scripted(LIST, DELETE, CLAIM)
+    toolbox = FakeToolbox()
+    collect(run_turn(converse_stream, "model", toolbox, [], "Delete my laptop receipt."))
+    # After listing, the model was still forced to use a tool, so it called delete.
+    assert seen[1]["toolConfig"]["toolChoice"] == {"any": {}}
+    assert [name for name, _ in toolbox.calls] == ["list_documents", "delete_document"]
+    # Once delete was attempted, it may answer in text.
+    assert "toolChoice" not in seen[2]["toolConfig"]

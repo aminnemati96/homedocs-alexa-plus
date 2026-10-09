@@ -27,6 +27,8 @@ log = logging.getLogger("homedocs")
 
 # Tools that remove data only run when the user's latest message asks for it.
 DESTRUCTIVE_TOOLS = {"delete_document"}
+# How many rounds the model must keep using tools while it looks for what to delete.
+MAX_DELETE_ROUNDS = 3
 DELETE_INTENT = re.compile(r"\b(forget|delete|remove|erase|get rid of|throw out)\b", re.IGNORECASE)
 
 SYSTEM_PROMPT = """You are a voice assistant like Alexa, running on the user's device. Today is {today} (the user's local date).
@@ -112,13 +114,19 @@ async def run_turn(
     skill = getattr(toolbox, "skill", "") or FALLBACK_SKILL
     system = [{"text": SYSTEM_PROMPT.format(today=today.strftime("%A, %B %d, %Y"), skill=skill)}]
     spoken: list[str] = []
+    # When the user asks to delete something, the model may not answer until it
+    # has actually called delete_document (it once listed the documents and then
+    # said "Deleted" without deleting anything).
+    wants_delete = bool(DELETE_INTENT.search(user_text))
+    delete_attempted = False
 
     for round_number in range(MAX_TOOL_ROUNDS + 1):
         # The first round must call a tool, so every answer is grounded in the
         # user's documents instead of the model's memory of the conversation
         # (which once produced a renewal date that exists in no document).
         tool_config: dict[str, Any] = {"tools": toolbox.converse_tools}
-        if round_number == 0:
+        must_delete_first = wants_delete and not delete_attempted and round_number < MAX_DELETE_ROUNDS
+        if round_number == 0 or must_delete_first:
             tool_config["toolChoice"] = {"any": {}}
         texts: dict[int, str] = {}
         tools: dict[int, dict[str, Any]] = {}
@@ -174,7 +182,9 @@ async def run_turn(
             # Logged so CloudWatch shows which tools answered each question.
             log.info("tool %s %s", tool["name"], json.dumps(tool["input"])[:300])
             started = time.perf_counter()
-            if tool["name"] in DESTRUCTIVE_TOOLS and not DELETE_INTENT.search(user_text):
+            if tool["name"] in DESTRUCTIVE_TOOLS:
+                delete_attempted = True
+            if tool["name"] in DESTRUCTIVE_TOOLS and not wants_delete:
                 # Guard: deleting needs the user's own words, never just the model's choice.
                 output, is_error = {"text": "Not deleted: the user did not ask to delete or forget anything."}, True
             else:
