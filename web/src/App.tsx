@@ -112,7 +112,6 @@ export default function App() {
       return;
     }
     const history = turns;
-    if (/notification|coming up|due soon/i.test(text)) setNotificationsHeard(true);
     setTurns([...history, { role: "user", text }]);
     setTools([]);
     setError("");
@@ -137,6 +136,9 @@ export default function App() {
             break;
           case "tool_call":
             setTools((runs) => [...runs, { id: event.id, name: event.name, input: event.input }]);
+            // If the answer reads out upcoming dates, the notifications have been
+            // heard, whatever the question was ("hello" can trigger it too).
+            if (event.name === "list_upcoming_dates") setNotificationsHeard(true);
             break;
           case "tool_result":
             setTools((runs) =>
