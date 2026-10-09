@@ -58,7 +58,7 @@ def paperwork_skill() -> str:
 
 
 @mcp.tool(title="Search documents", annotations=READ_ONLY)
-def search_documents(query: str, top_k: int = 3) -> list[SearchHit]:
+def search_documents(query: str, top_k: int = 5) -> list[SearchHit]:
     """Find passages in the user's documents that answer a question.
 
     Use for any question about what a bill, lease, warranty or policy says.
