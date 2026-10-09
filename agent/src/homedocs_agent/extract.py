@@ -60,7 +60,9 @@ RECORD_TOOL = {
 
 PROMPT = """Read this household document and record its key facts with the record_document tool.
 Today is {today}. Use only what the document says; if a year is missing from a date, \
-infer it from the document's context. Leave out account passwords and full card numbers."""
+infer it from the document's context. Copy amounts, counts and limits exactly as written: \
+"one claim per year" is a count, not "$1". If a number is hard to read, leave it out \
+rather than guess. Leave out account passwords and full card numbers."""
 
 
 class UnsupportedFile(ValueError):

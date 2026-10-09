@@ -26,6 +26,10 @@ const SUGGESTIONS = [
   "When does my car insurance renew?",
 ];
 
+function notificationKey(n: Notification): string {
+  return `${n.document_id}|${n.label}|${n.date}`;
+}
+
 export default function App() {
   const [ring, setRing] = useState<RingState>("idle");
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -35,7 +39,10 @@ export default function App() {
   const [error, setError] = useState("");
   const [voiceOn, setVoiceOn] = useState(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [notificationsHeard, setNotificationsHeard] = useState(false);
+  // Notifications already read out, by "document|label|date". The ring only turns
+  // yellow for ones the user hasn't heard, so adding a document that has no new
+  // near-term date doesn't light it up again.
+  const [heardKeys, setHeardKeys] = useState<Set<string>>(new Set());
   const [needPasscode, setNeedPasscode] = useState(passcodeMissing);
   const [passcodeInput, setPasscodeInput] = useState("");
   // True until the first notification check finishes: the ring spins slowly in
@@ -49,7 +56,12 @@ export default function App() {
   const activeQueue = useRef<SpeechQueue | null>(null);
 
   const busy = ring !== "idle";
-  const notify = !busy && !notificationsHeard && notifications.length > 0;
+  const unheard = notifications.filter((n) => !heardKeys.has(notificationKey(n)));
+  const notify = !busy && unheard.length > 0;
+
+  function markNotificationsHeard() {
+    setHeardKeys((keys) => new Set([...keys, ...notifications.map(notificationKey)]));
+  }
 
   // Like an Echo: check for due dates on start and light the ring yellow if any.
   // The check is a plain MCP tool call, shown in the panel so viewers can see it.
@@ -82,7 +94,7 @@ export default function App() {
   /** Read notifications from the last check: no model call, no new MCP lookup. */
   async function readNotifications(question: string) {
     const summary = briefing.current?.text ?? describeNotifications(notifications);
-    setNotificationsHeard(true);
+    markNotificationsHeard();
     setTurns((all) => [...all, { role: "user", text: question }, { role: "assistant", text: summary }]);
     if (lastCheck.current) {
       setTools([{ ...lastCheck.current, input: { ...lastCheck.current.input, from: "startup check" } }]);
@@ -138,7 +150,7 @@ export default function App() {
             setTools((runs) => [...runs, { id: event.id, name: event.name, input: event.input }]);
             // If the answer reads out upcoming dates, the notifications have been
             // heard, whatever the question was ("hello" can trigger it too).
-            if (event.name === "list_upcoming_dates") setNotificationsHeard(true);
+            if (event.name === "list_upcoming_dates") markNotificationsHeard();
             break;
           case "tool_result":
             setTools((runs) =>
@@ -227,7 +239,6 @@ export default function App() {
       else setError(e instanceof Error ? e.message : String(e));
     } finally {
       setRing("idle");
-      setNotificationsHeard(false);
       void refreshNotifications(false);
     }
   }
