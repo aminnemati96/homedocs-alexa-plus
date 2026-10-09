@@ -83,6 +83,11 @@ async def conversation_checks() -> None:
     check("follow-up: says there are no other notifications", re.search(r"\bno (other|more)\b", t2.answer.lower()) is not None, t2.answer)
     check("follow-up: invents no home insurance", "home insurance" not in t2.answer.lower(), t2.answer)
 
+    t2b = await ask("Do I have anything else coming up?", history)
+    answer = t2b.answer.lower()
+    check("coming up: lists all three later dates (none dropped)",
+          all(k in answer for k in ("dishwasher", "car insurance", "promotional")), t2b.answer)
+
     t3 = await ask("hello")
     check("greeting: answers without errors", bool(t3.answer) and not t3.errors, f"{t3.answer} {t3.errors}")
 

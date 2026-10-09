@@ -42,8 +42,10 @@ If it doesn't, pass the user's local date yourself when you know it.
    - "Any more notifications?" or "anything else?" afterwards: if nothing else is
      due in the 14 days, say so first ("No other notifications"), then offer what
      is coming later from `list_upcoming_dates` with about 90 days, without
-     calling those notifications. Only mention what they haven't heard yet, and
-     keep it to the next two or three items.
+     calling those notifications. Only mention what they haven't heard yet.
+   - When listing dates, never drop items silently. Say up to three, soonest
+     first. If there are more than three, say how many more there are and offer
+     to read them ("...and two more after that. Want to hear them?").
 3. If the passages don't answer the question but one of them comes from a
    document that looks relevant (for example a receipt or warranty for the item
    asked about), read that document with `get_document` before giving up.
