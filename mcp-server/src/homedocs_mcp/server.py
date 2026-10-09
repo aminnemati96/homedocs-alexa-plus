@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import date
 
 from mcp.server.fastmcp import FastMCP
@@ -25,6 +26,8 @@ REMOVES_DATA = ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempot
 # The Agent Skill that teaches an agent how to use these tools (agentskills.io
 # format). Served as an MCP resource so any client can load it from the server.
 SKILL_URI = "skill://homedocs-paperwork/SKILL.md"
+
+log = logging.getLogger("homedocs")
 
 store = config.make_store()  # local JSON files, or DynamoDB when deployed
 searcher = config.make_searcher(store)
@@ -112,7 +115,8 @@ def save_document(
         text=text,
     )
     store.add(doc)
-    searcher.index(doc)
+    passages = searcher.index(doc)
+    log.info("saved document %s (%d passages)", doc.id, passages)
     return doc
 
 
@@ -127,6 +131,7 @@ def delete_document(document_id: str) -> Document:
     if doc is None:
         raise ValueError(f"No document with id '{document_id}'")
     searcher.delete(doc)
+    log.info("deleted document %s", doc.id)
     return doc
 
 
@@ -146,6 +151,7 @@ def admin_reset_demo() -> dict:
     for doc in samples.values():
         store.put(doc)
         searcher.index(doc)
+    log.info("demo reset: removed %d documents, restored %d samples", removed, len(samples))
     return {"removed": removed, "samples": len(samples)}
 
 

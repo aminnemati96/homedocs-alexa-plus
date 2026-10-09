@@ -117,3 +117,19 @@ def test_build_messages_keeps_only_recent_history():
     messages = build_messages(history, "latest")
     assert len(messages) <= 21
     assert messages[-1]["content"][0]["text"] == "latest"
+
+
+DELETE = ([{"toolUse": {"toolUseId": "d1", "name": "delete_document", "input": {"document_id": "apartment-lease"}}}], "tool_use")
+
+
+def test_delete_only_runs_when_the_user_asked_for_it():
+    toolbox = FakeToolbox()
+    converse_stream, _ = scripted(DELETE, ANSWER)
+    events = collect(run_turn(converse_stream, "model", toolbox, [], "what happens if I spill coffee?"))
+    assert toolbox.calls == []
+    assert [e["is_error"] for e in events if e["type"] == "tool_result"] == [True]
+
+    toolbox = FakeToolbox()
+    converse_stream, _ = scripted(DELETE, ANSWER)
+    collect(run_turn(converse_stream, "model", toolbox, [], "please forget my old lease"))
+    assert [name for name, _ in toolbox.calls] == ["delete_document"]

@@ -27,7 +27,10 @@ RECORD_TOOL = {
                 "properties": {
                     "title": {
                         "type": "string",
-                        "description": "Short human title, e.g. 'Home insurance policy' or 'Hydro bill, October 2026'.",
+                        "description": (
+                            "Short human title that names the main item or service, e.g. "
+                            "'Home insurance policy', 'Hydro bill, October 2026' or 'Laptop receipt (Lumora Book 14)'."
+                        ),
                     },
                     "category": {"type": "string", "enum": CATEGORIES},
                     "provider": {"type": "string", "description": "Company or agency that issued it."},

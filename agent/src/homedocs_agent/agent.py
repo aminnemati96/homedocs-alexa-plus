@@ -14,12 +14,20 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
+import re
 import time
 from collections.abc import AsyncIterator, Callable
 from datetime import date
 from typing import Any, Protocol
 
 MAX_TOOL_ROUNDS = 5
+
+log = logging.getLogger("homedocs")
+
+# Tools that remove data only run when the user's latest message asks for it.
+DESTRUCTIVE_TOOLS = {"delete_document"}
+DELETE_INTENT = re.compile(r"\b(forget|delete|remove|erase|get rid of|throw out)\b", re.IGNORECASE)
 
 SYSTEM_PROMPT = """You are a voice assistant like Alexa, running on the user's device. Today is {today} (the user's local date).
 
@@ -163,8 +171,14 @@ async def run_turn(
         for index in sorted(tools):
             tool = tools[index]
             yield {"type": "tool_call", "id": tool["id"], "name": tool["name"], "input": tool["input"]}
+            # Logged so CloudWatch shows which tools answered each question.
+            log.info("tool %s %s", tool["name"], json.dumps(tool["input"])[:300])
             started = time.perf_counter()
-            output, is_error = await toolbox.call(tool["name"], tool["input"])
+            if tool["name"] in DESTRUCTIVE_TOOLS and not DELETE_INTENT.search(user_text):
+                # Guard: deleting needs the user's own words, never just the model's choice.
+                output, is_error = {"text": "Not deleted: the user did not ask to delete or forget anything."}, True
+            else:
+                output, is_error = await toolbox.call(tool["name"], tool["input"])
             yield {
                 "type": "tool_result",
                 "id": tool["id"],
