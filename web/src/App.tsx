@@ -338,8 +338,10 @@ export default function App() {
           </label>
         </form>
         <p className="demo-note">
-          Demo data: the sample documents use dates relative to today, so something is always
-          coming up. Anything you add is cleared nightly.
+          Demo data: five made-up sample documents whose dates are offsets from today (the
+          internet bill is always due in 6 days), so something is always coming up. Every night at
+          4 AM Atlantic time, anything you added is deleted and the samples are reloaded with their
+          dates recalculated for the new day.
         </p>
       </main>
 
