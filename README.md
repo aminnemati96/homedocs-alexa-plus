@@ -17,8 +17,9 @@ simulates an Alexa+ device** for the demo.
 type your questions).
 
 The site asks for a **demo passcode**, because every question uses paid AWS services.
-Hackathon judges will find it in the Devpost submission under **Additional info**, at
-the top of the AWS services answer. The demo data is explained in
+Hackathon judges: you'll find the passcode in the Devpost submission's **Additional
+info**. It's on the first line of the answer to "Which AWS services did you
+incorporate and how?" The demo data is explained in
 [About the demo data](#about-the-demo-data).
 
 ## What it does

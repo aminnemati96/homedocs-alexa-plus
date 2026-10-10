@@ -351,8 +351,9 @@ export default function App() {
             <h2 id="passcode-title">Demo passcode</h2>
             <p>This demo uses paid AWS services, so it needs a passcode.</p>
             <p>
-              Judges: it is in the Devpost submission, under <strong>Additional info</strong>, at the
-              top of the AWS services answer.
+              Hackathon judges: you'll find the passcode in the Devpost submission's{" "}
+              <strong>Additional info</strong>. It's on the first line of the answer to "Which AWS services
+              did you incorporate and how?"
             </p>
             <input
               type="password"
