@@ -351,8 +351,8 @@ export default function App() {
             <h2 id="passcode-title">Demo passcode</h2>
             <p>This demo uses paid AWS services, so it needs a passcode.</p>
             <p>
-              Judges: it is in the Devpost submission, in the <strong>Project Testing Link</strong> field
-              under Additional info.
+              Judges: it is in the Devpost submission, under <strong>Additional info</strong>, at the
+              top of the AWS services answer.
             </p>
             <input
               type="password"
