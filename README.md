@@ -11,6 +11,16 @@ Built for the Amazon "Build, Ship, Shape" hackathon, Alexa+ track, as a
 **self-hosted MCP server** (spec 2025-11-25, Streamable HTTP) plus a **web app that
 simulates an Alexa+ device** for the demo.
 
+## Try the live demo
+
+**https://d296qqe0ajd20y.cloudfront.net** (Chrome or Edge; allow the microphone, or
+type your questions).
+
+The site asks for a **demo passcode**, because every question uses paid AWS services.
+Hackathon judges will find it in the Devpost submission, in the **Project Testing
+Link** field under Additional info. The demo data is explained in
+[About the demo data](#about-the-demo-data).
+
 ## What it does
 
 - **Answers questions from your documents.** Semantic search over passages of your

@@ -349,7 +349,11 @@ export default function App() {
         <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="passcode-title">
           <form className="passcode" onSubmit={onPasscode}>
             <h2 id="passcode-title">Demo passcode</h2>
-            <p>This demo uses paid AWS services, so it needs the passcode from the project page.</p>
+            <p>This demo uses paid AWS services, so it needs a passcode.</p>
+            <p>
+              Judges: it is in the Devpost submission, in the <strong>Project Testing Link</strong> field
+              under Additional info.
+            </p>
             <input
               type="password"
               value={passcodeInput}
